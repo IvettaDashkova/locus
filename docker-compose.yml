@@ -1,0 +1,27 @@
+# Locus — local Postgres with PostGIS + pgvector + pg_trgm.
+# Mirrors the hosted Supabase database (both extensions present there too).
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: locus-db
+    environment:
+      POSTGRES_USER: locus
+      POSTGRES_PASSWORD: locus
+      POSTGRES_DB: locus
+    ports:
+      # Host port is configurable to avoid clashing with a system Postgres on 5432.
+      # Override with LOCUS_DB_PORT and match it in DATABASE_URL.
+      - "${LOCUS_DB_PORT:-5432}:5432"
+    volumes:
+      - locus-pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locus -d locus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  locus-pgdata:
