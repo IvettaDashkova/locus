@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { client } from "@/db/client";
+import { getClient } from "@/db/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Deploy smoke test: DB reachable + PostGIS/pgvector present. */
+/** Deploy smoke test: DB reachable + PostGIS/pgvector present. Connects only at request time. */
 export async function GET() {
   try {
-    const ext = await client<{ extname: string }[]>`
+    const sql = getClient();
+    const ext = await sql<{ extname: string }[]>`
       SELECT extname FROM pg_extension WHERE extname IN ('postgis', 'vector')
     `;
     const names = ext.map((r) => r.extname);
