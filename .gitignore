@@ -42,6 +42,9 @@ yarn-error.log*
 /.cache/                 # Transformers.js model cache
 .scaffold_stash/
 
+# editors
+.idea/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

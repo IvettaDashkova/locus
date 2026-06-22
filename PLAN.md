@@ -1,442 +1,197 @@
-# Locus — Phase 0 Foundation Plan
+# Locus — Phase 1 Plan · Capture (schema-driven geo forms)
 
-> Shared foundation only. **No feature logic.** Every later phase (Capture / Ask / Act / Tracks)
-> is a vertical slice on top of what's defined here. The goal of Phase 0: `npm run dev` boots to an
-> app shell with a working map, a migrated Postgres (PostGIS + pgvector) with a `sites` table, the
-> four-module nav, and an `/evals` runner that prints results.
+> Build a form builder: a plain-English description → a generated JSON Schema → an RJSF form whose
+> **location fields are real map widgets** → submissions saved to Postgres and anchored to a `site`.
+> The LLM only *structures* (emits a schema); it never invents data. Generated schemas are
+> Zod-validated before use.
+>
+> Phase 0 plan archived at [`docs/plans/phase-0-foundation.md`](./docs/plans/phase-0-foundation.md).
+> **No code in this doc — design + open questions only.** Spec: [`README.md`](./README.md).
 
-Source of truth: [`README.md`](./README.md) (spec) and [`FREE_STACK.md`](./FREE_STACK.md) (providers).
-Everything below stays inside the 100%-free stack and keeps the LLM provider a one-line swap.
-
----
-
-## 1. Decisions locked for Phase 0
-
-| Area | Choice | Note |
-| --- | --- | --- |
-| App | **Single Next.js app** (App Router) + TypeScript, **not** a multi-package monorepo (yet) | One deployable. The MCP server (Phase 3) is the only thing that may later become a workspace package; structure leaves room for it. |
-| Package manager | **npm** | Matches `BUILD_PLAYBOOK.md` (`npm run …`). |
-| DB (local) | **docker-compose** `postgis/postgis:16-3.4` + **pgvector layered via 2-line Dockerfile** — **LOCKED** | PostGIS image ships *without* pgvector; add it on top (`postgresql-16-pgvector`), don't swap the base. Mirrors Supabase (both extensions present). Verify on first `db:up`. |
-| DB (hosted) | **Supabase** free tier — **LOCKED** (pooler on :6543 already provisioned) | Used for prod *and* as `DATABASE_URL`. Neon not pursued — switching now discards working setup for no gain. |
-| ORM / migrations | **Drizzle** (`drizzle-orm` + `drizzle-kit`) | SQL-first migrations; raw SQL for PostGIS/vector columns Drizzle doesn't model natively. |
-| Map | **MapLibre GL** + **OpenFreeMap** `liberty` style | No key, no signup. |
-| UI | **Tailwind** + **shadcn/ui** | Left module nav: Capture / Ask / Act / Tracks. |
-| LLM | **Vercel AI SDK**, provider = Gemini free (hosted) / **Ollama** (local) | Single `getModel()` factory; swap by env. |
-| Embeddings | **Transformers.js**, in-process. `vector(384)` **LOCKED**; model `bge-small-en-v1.5` (default) via one config constant | No API, no key. 384-d holds the index light (matters on free Supabase/Vercel). Falling back to `multilingual-e5-small` (also 384-d) for PL/UK content is a **config + re-embed**, not a schema change — see §9. |
-| Evals | **In-repo runner** (`/evals`), JSONL results writer | Modules register cases; Phase 0 ships a passing smoke case. |
-| Tracing | **Langfuse** free tier, lazily initialized | Keys optional in Phase 0; no-op if unset. |
-
-### Why single app, not monorepo
-The four modules share Next.js, Postgres, the AI SDK, MapLibre, and the eval harness almost
-entirely (README "Why one app, four modules"). A Turborepo/pnpm-workspace split adds tooling cost
-with no Phase-0 benefit. **One concession:** the Phase-3 MCP server is a long-running process Vercel
-won't host (FREE_STACK gotcha), so its tool code lives under `packages/` from the start and is
-imported by both a future standalone server and the in-app API routes. Phase 0 only creates the
-empty placeholder; no workspace wiring until Phase 3 needs it.
+Builds directly on the Phase-0 foundation: `getModel()` (AI SDK v6), the `sites` table +
+`getDb()/getClient()`, the MapLibre shell (`MapShell` exposes the map via `onReady`), shadcn/ui, and
+the `/evals` registry (`src/evals/index.ts`).
 
 ---
 
-## 2. Repository / app structure
+## 1. The slice, end to end
 
 ```
-locus/
-├─ README.md  FREE_STACK.md  BUILD_PLAYBOOK.md  PLAN.md
-├─ .env.example                      # all-free config (see §8)
-├─ .env.local                        # gitignored, real values
-├─ docker-compose.yml                # Postgres + PostGIS + pgvector (§4)
-├─ package.json                      # scripts: dev/build/db:*/seed/eval/lint
-├─ tsconfig.json                     # paths: "@/*" -> "src/*"
-├─ next.config.ts
-├─ tailwind.config.ts  postcss.config.mjs
-├─ components.json                   # shadcn/ui config
-├─ drizzle.config.ts                 # Drizzle Kit (§5)
-├─ docker/
-│  └─ initdb/
-│     └─ 001-extensions.sql          # CREATE EXTENSION postgis, vector
-├─ drizzle/                          # generated SQL migrations + journal
-│  ├─ 0000_init.sql
-│  └─ meta/
-├─ public/                           # static assets, map icons
-├─ src/
-│  ├─ app/                           # App Router
-│  │  ├─ layout.tsx                  # root: fonts, <body>, providers
-│  │  ├─ globals.css                 # Tailwind + shadcn CSS vars
-│  │  ├─ page.tsx                    # "/" -> redirect to /capture (or landing)
-│  │  ├─ (modules)/                  # route group sharing AppShell layout
-│  │  │  ├─ layout.tsx               # AppShell: left nav + map region (§7)
-│  │  │  ├─ capture/page.tsx         # placeholder
-│  │  │  ├─ ask/page.tsx             # placeholder
-│  │  │  ├─ act/page.tsx             # placeholder
-│  │  │  └─ tracks/page.tsx          # placeholder
-│  │  └─ api/
-│  │     └─ health/route.ts          # GET -> { db: ok, postgis, vector }
-│  ├─ components/
-│  │  ├─ ui/                         # shadcn primitives (button, card, …)
-│  │  ├─ layout/
-│  │  │  ├─ app-shell.tsx
-│  │  │  └─ module-nav.tsx           # Capture/Ask/Act/Tracks links + icons
-│  │  └─ map/
-│  │     ├─ map-shell.tsx            # MapLibre wrapper ('use client') (§6)
-│  │     └─ map-config.ts            # style URL, default center/zoom
-│  ├─ db/
-│  │  ├─ client.ts                   # drizzle(postgres(DATABASE_URL))
-│  │  ├─ schema.ts                   # tables (sites in Phase 0) (§5)
-│  │  └─ types.ts                    # inferred + GeoJSON helper types
-│  ├─ lib/
-│  │  ├─ ai/
-│  │  │  ├─ provider.ts              # getModel() — Gemini | Ollama (§9)
-│  │  │  └─ embeddings.ts            # Transformers.js singleton embed() (§9)
-│  │  ├─ env.ts                      # zod-validated env (server-only)
-│  │  └─ utils.ts                    # cn(), misc
-│  └─ evals/                         # shared eval harness (§10)
-│     ├─ runner.ts                   # discover + run registered suites
-│     ├─ writer.ts                   # JSONL + console summary
-│     ├─ types.ts                    # EvalCase, EvalResult, Suite
-│     ├─ index.ts                    # registry; modules push suites here
-│     ├─ suites/
-│     │  └─ foundation.smoke.ts      # Phase-0 passing smoke suite
-│     └─ results/                    # gitignored output (.jsonl)
-├─ scripts/
-│  ├─ seed.ts                        # sample sites (Phase 0.3)
-│  └─ check-db.ts                    # verify extensions present
-└─ packages/
-   └─ locus-mcp/                     # EMPTY placeholder (Phase 3); README stub only
+ prompt box ──POST /api/generate──► getModel() (Gemini/Ollama)
+   "a field survey form with        + one tool: emit_schema(JSON-Schema-shaped input)
+    site name, condition rating,            │
+    photo notes, and a location"            ▼
+                                     Zod guard validates the emitted schema
+                                     (retry once, feeding the error back)
+                                            │  valid JSON Schema + uiSchema
+                                            ▼
+   JSON inspector (editable) ◄────► RJSF + AJV (draft 2020-12) renders the form
+                                            │   custom widgets by format:
+                                            ▼   • geo-point  → click map → GeoJSON Point
+                                     filled formData            • geo-polygon → draw → GeoJSON Polygon
+                                            │
+                                     POST /api/submissions
+                                            ▼
+                                     upsert site (from the designated geo-point) + insert submission
+                                     → pin appears on the shared map
 ```
 
-**Path alias:** `@/*` → `src/*`. Server-only modules (`db/`, `lib/ai/`, `lib/env.ts`) guarded so
-they never bundle into client components.
+Three vertical steps (each commit-sized, matching playbook 1.2 / 1.3 / 1.4):
+1. **Generate** — `/api/generate` + Zod guard + prompt box + read-only JSON inspector.
+2. **Render + geo widgets + save** — RJSF/AJV, the two map widgets, editable inspector, persistence.
+3. **Evals + polish** — Capture eval suite, states/mobile, deploy, README update.
 
 ---
 
-## 3. package.json scripts
+## 2. Data model (new migration `0001_capture`)
 
-```jsonc
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:generate": "drizzle-kit generate",   // SQL from schema.ts
-    "db:migrate": "tsx scripts/migrate.ts",  // apply migrations (drizzle-orm/.../migrate)
-    "db:check": "tsx scripts/check-db.ts",   // assert postgis+vector enabled
-    "seed": "tsx scripts/seed.ts",
-    "eval": "tsx src/evals/runner.ts"
-  }
-}
+Two tables, both anchoring to `sites` (the Phase-0 anchor):
+
 ```
-Runner uses **`tsx`** for TS scripts (no build step). `db:migrate` runs Drizzle's migrator against
-`DATABASE_URL`; custom-SQL migrations (PostGIS/vector) live in the same `drizzle/` folder so one
-command applies everything.
+forms                                   submissions
+─────                                   ───────────
+id          uuid pk                     id          uuid pk
+name        text                        form_id     uuid fk → forms(id)
+description text                        site_id     uuid fk → sites(id)   -- the site this is about
+json_schema jsonb     -- generated      data        jsonb                 -- full RJSF formData (source of truth)
+ui_schema   jsonb     -- widget hints    geom        geometry(Point,4326)  -- projected primary geo-point (spatial index)
+created_at  timestamptz                 created_at  timestamptz
+```
+
+- **`forms`** persists a generated schema so one form yields many submissions (and so evals/demo can
+  reload it). Generation can also run ephemerally (generate → fill → submit) — persisting is the
+  default; see open Q2.
+- **`submissions.data`** is the canonical record (exact GeoJSON the user entered). We additionally
+  **project** the form's designated location field into `submissions.geom` (PostGIS) so submissions
+  are spatially queryable without digging through JSON — same pattern Phase 2/4 will reuse.
+- **Geometry convention is unchanged from Phase 0:** SRID 4326, GeoJSON at the API boundary
+  (`ST_GeomFromGeoJSON` on write, `ST_AsGeoJSON` on read), `geometry(Point,4326)` + GiST index.
+- A `geo-polygon` value, when present, is stored in `data` as GeoJSON for now; a dedicated
+  `geometry(Polygon,4326)` column is an additive migration if/when a module needs to query it.
+
+### How a submission attaches to a site
+The form designates **one** `geo-point` field as the site location (via a `ui:options` flag, default
+= the first geo-point). On submit:
+- if the form also has a "name"-like field, **upsert a site** (`name` + `geom` from the geo-point) and
+  link `submissions.site_id`;
+- if a site is instead chosen from existing ones (picker), link to it and skip creation.
+Default for the demo: **create-or-select** (new site from the geo-point, with an optional "attach to
+existing site" toggle). See open Q1.
 
 ---
 
-## 4. docker-compose — Postgres + PostGIS + pgvector
+## 3. `/api/generate` — NL → JSON Schema
 
-One container. **LOCKED approach:** base `postgis/postgis:16-3.4` ships PostGIS but **not** pgvector,
-so we layer pgvector on with a 2-line Dockerfile (keep PostGIS as base — adding PostGIS onto a
-pgvector image is harder than the reverse). This mirrors Supabase, where both extensions are already
-present. Init scripts in `/docker-entrypoint-initdb.d` then `CREATE EXTENSION` once on first boot.
-
-```dockerfile
-# docker/Dockerfile
-FROM postgis/postgis:16-3.4
-RUN apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*
-```
-
-```yaml
-# docker-compose.yml
-services:
-  db:
-    build: { context: ., dockerfile: docker/Dockerfile }
-    container_name: locus-db
-    environment:
-      POSTGRES_USER: locus
-      POSTGRES_PASSWORD: locus
-      POSTGRES_DB: locus
-    ports: ["5432:5432"]
-    volumes:
-      - locus-pgdata:/var/lib/postgresql/data
-      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U locus -d locus"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-volumes:
-  locus-pgdata:
-```
-
-```sql
--- docker/initdb/001-extensions.sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS vector;     -- pgvector
-CREATE EXTENSION IF NOT EXISTS pg_trgm;    -- helps keyword/fuzzy later
-```
-
-Local `DATABASE_URL`: `postgres://locus:locus@localhost:5432/locus`.
-On Supabase/Neon the same `CREATE EXTENSION` runs as the first migration (both support all three).
+- **Route:** `POST /api/generate` (nodejs runtime, dynamic), body `{ prompt: string }`.
+- **Model:** `getModel()` (Gemini free / Ollama) via AI SDK v6 `generateText`.
+- **One tool — `emit_schema`** (AI SDK v6: `tool({ description, inputSchema })`, `toolChoice:
+  'required'`). Its `inputSchema` is a **Zod meta-schema** describing the subset of JSON Schema we
+  support, so the model is forced to return a structurally-valid schema, not prose.
+  - *Alternative considered:* `generateObject`. We keep the explicit **tool** (per playbook) — it
+    makes the "LLM structures, never invents" boundary legible and logs cleanly in Langfuse (Phase 3).
+- **Supported JSON-Schema subset** (the Zod guard enforces exactly this):
+  - root `type: "object"`, `properties`, `required`, `title`, `description`;
+  - field types: `string` | `number` | `integer` | `boolean` | `array` (of the above);
+  - `enum`, `format` (incl. our custom **`geo-point`** / **`geo-polygon`**, plus `email`/`date`/`uri`);
+  - constraints: `minimum`/`maximum`/`minLength`/`maxLength`/`pattern`;
+  - **conditionals:** `allOf` with `if`/`then` (RJSF + AJV draft 2020-12 support these) — this is what
+    the `conditional_ok` eval checks.
+- **Zod guard + retry:** validate the emitted object against the meta-schema. On failure, **retry
+  once** with the validation error appended to the prompt ("your schema failed validation: …; fix
+  it"). Second failure → 422 with the error (surfaced in the UI, not a crash).
+- **Returns:** `{ jsonSchema, uiSchema }`. `uiSchema` is derived (map `format: geo-point` →
+  `ui:widget: geoPoint`, mark the designated site-location field, set `ui:order`).
 
 ---
 
-## 5. Drizzle setup + base migration (`sites`)
+## 4. Render + geo widgets (client)
 
-**Driver:** `postgres` (postgres.js) + `drizzle-orm/postgres-js`. **Kit:** `drizzle-kit` for
-`generate`. Custom-type columns (PostGIS `geometry`, pgvector `vector`) use Drizzle `customType` so
-the TS schema stays the single source while emitting correct SQL.
-
-```ts
-// src/db/schema.ts  (Phase 0 = sites only; later phases append tables)
-import { pgTable, uuid, text, jsonb, timestamp, doublePrecision, index } from "drizzle-orm/pg-core";
-import { geometry } from "./types"; // customType -> geometry(Point,4326)
-
-export const sites = pgTable("sites", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: text("category"),                 // domain-agnostic label
-  geom: geometry("geom").notNull(),           // POINT, SRID 4326
-  properties: jsonb("properties").$type<Record<string, unknown>>().default({}),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => ({
-  geomIdx: index("sites_geom_gist").using("gist", t.geom),  // spatial index
-}));
-```
-
-`geometry`/`vector` custom types live in `src/db/types.ts` (return as GeoJSON via `ST_AsGeoJSON`
-in queries; store via `ST_GeomFromGeoJSON` / `ST_SetSRID(ST_MakePoint(lng,lat),4326)`).
-
-**Migration `0000_init.sql`** (generated then hand-augmented):
-1. `CREATE EXTENSION` for postgis, vector, pg_trgm (idempotent — covers hosted DBs whose init
-   script we don't control).
-2. `CREATE TABLE sites …` with `geom geometry(Point, 4326) NOT NULL`.
-3. `CREATE INDEX sites_geom_gist ON sites USING GIST (geom);`
-4. `updated_at` trigger (or handle in app) — trigger preferred so raw SQL stays correct.
-
-**`sites` is the anchor table.** Phase 1 submissions, Phase 2 chunks, Phase 4 tracks all FK to (or
-spatially relate to) `sites`. Defining it now is the whole point of Phase 0's DB work.
-
-A `GET /api/health` route runs `SELECT postgis_version()`, checks `vector` in `pg_extension`, and
-`SELECT 1` — the deploy smoke test for Phase 0.3.
+- **RJSF + AJV draft 2020-12** (`@rjsf/core` + `@rjsf/validator-ajv8`, `@rjsf/utils`). Register the
+  custom formats `geo-point` / `geo-polygon` with AJV (format validators that accept GeoJSON
+  Point/Polygon) so validation passes, and register the matching **custom widgets**.
+- **`GeoPointInput`** (`ui:widget: geoPoint`): an embedded MapLibre map (reuse the Phase-0 map
+  component, sized for a form field); click → place/move a marker → value = GeoJSON `Point` (4326).
+  Turf for nothing yet; just lng/lat → GeoJSON.
+- **`GeoPolygonInput`** (`ui:widget: geoPolygon`): click to add vertices, close the ring → value =
+  GeoJSON `Polygon`; **Turf.js** validates (`booleanValid`, self-intersection) and shows area
+  (`turf.area`). Drawing: plan **`terra-draw`** (MapLibre-native, modern) for robustness; fall back to
+  a minimal click-to-add-vertex implementation if we want zero extra deps first. See open Q3.
+- **Editable JSON inspector:** a panel showing the live `jsonSchema`; editing it **re-renders** the
+  form (controlled state). Invalid JSON → inline error, last good schema stays mounted.
+- **Layout on the Capture route:** prompt box + inspector in a left panel; the rendered form in a
+  card over the shared shell map; placing a geo-point drops a pin on that same map.
 
 ---
 
-## 6. Map shell (MapLibre GL + OpenFreeMap)
+## 5. `/api/submissions` — persist
 
-```ts
-// src/components/map/map-config.ts
-export const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty"; // no key, no signup
-export const DEFAULT_CENTER: [number, number] = [0, 20];
-export const DEFAULT_ZOOM = 1.6;
-```
-
-```tsx
-// src/components/map/map-shell.tsx  ('use client')
-// - dynamic import of 'maplibre-gl' (window-only); import its CSS
-// - new maplibregl.Map({ container, style: MAP_STYLE, center, zoom })
-// - NavigationControl + AttributionControl (OSM/OpenFreeMap credit, required)
-// - exposes a ref/context so later modules add sources/layers (pins, routes, deck.gl overlay)
-// - cleanup map.remove() on unmount; resize observer for responsive panel
-```
-
-Rendered client-side only (`next/dynamic`, `ssr: false`) inside `AppShell`. **Upgrade path baked
-in:** swapping `MAP_STYLE` to a Protomaps `.pmtiles` style or OSM raster is the *only* change needed
-for self-hosted/offline (FREE_STACK) — kept as a single constant so it's a one-line switch later.
-Deck.gl is **not** added in Phase 0 (Phase 4), but the map ref is exposed so an overlay can attach.
+- `POST /api/submissions` body `{ formId, siteId?, data }`.
+- Server: re-validate `data` against the stored `forms.json_schema` (AJV) — **never trust the client**;
+  extract the designated geo-point; in one transaction: upsert/select the `site`, insert the
+  `submission` with `data` + projected `geom` (`ST_SetSRID(ST_MakePoint(lng,lat),4326)` /
+  `ST_GeomFromGeoJSON`), return the row + site.
+- `GET /api/submissions?siteId=` (optional, for the demo list) returns recent submissions with
+  `ST_AsGeoJSON(geom)`.
 
 ---
 
-## 7. Design system + app layout
+## 6. Capture eval suite (`src/evals/suites/capture.*`)
 
-- **Tailwind** + **shadcn/ui** (`components.json`, CSS variables theme, `cn()` helper).
-- Install a minimal primitive set now: `button`, `card`, `tooltip`, `separator`, `scroll-area`,
-  `sheet` (mobile nav). More added per phase.
-- **AppShell** (`(modules)/layout.tsx`): fixed **left module nav** + main content region that hosts
-  the map and module panels.
+Registered in `src/evals/index.ts` (the Phase-0 registry already reserves the metric names).
+~8 cases, each: `{ prompt, expect }` → run the generation function → deterministic checks.
 
-```
-┌────────────────────────────────────────────────────────┐
-│  Locus                                          [theme] │  top bar (slim)
-├────────┬───────────────────────────────────────────────┤
-│ ▣ Capture │                                             │
-│ ◎ Ask     │            module content / panels          │
-│ ⚙ Act     │            (map region lives here)          │
-│ ⟿ Tracks  │                                             │
-│           │                                             │
-│ ─────     │                                             │
-│ ◔ status  │                                             │
-└────────┴───────────────────────────────────────────────┘
-```
+| Metric | Check |
+| --- | --- |
+| `schema_valid` | emitted schema compiles in AJV (draft 2020-12) and passes the Zod guard |
+| `field_coverage` | all field names implied by the prompt are present (case-insensitive contains) |
+| `conditional_ok` | prompts implying conditionals yield `if`/`then` (or `dependencies`) |
+| `geo_format_ok` | prompts implying a location yield a field with `format: geo-point`/`geo-polygon` |
 
-`module-nav.tsx`: four links (`/capture /ask /act /tracks`) with lucide icons + active-state
-highlight via `usePathname()`. Collapses into a shadcn `Sheet` on mobile. Phase-0 module pages are
-**placeholders** ("Capture — coming in Phase 1") so the shell is navigable and demoable.
+- Cases mix **LLM-dependent** (most) and **2 pure-schema** cases (validate a hand-written schema
+  renders + round-trips) so the suite still exercises the pipeline if the Gemini free tier is
+  rate-limited. LLM cases run against `getModel()`; results written to `src/evals/results/` as in
+  Phase 0. Keep N small to respect free-tier limits (cache identical prompts).
 
 ---
 
-## 8. `.env.example` (all-free)
+## 7. New dependencies (all free / open-source)
 
-```bash
-# ── LLM (pick ONE provider; AI SDK swaps them — see src/lib/ai/provider.ts) ──
-LLM_PROVIDER=gemini                 # gemini | ollama
-GEMINI_API_KEY=                     # Google AI Studio, free tier (hosted demo)
-GEMINI_MODEL=gemini-1.5-flash       # free-tier chat model
-# Local alternative (no key): run Ollama, then:
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1
-
-# ── Embeddings (local, in-process — no key, no cost) ──
-EMBEDDINGS_MODEL=Xenova/bge-small-en-v1.5   # Transformers.js; alt all-MiniLM-L6-v2
-
-# ── Database (Supabase or Neon free tier; local docker for dev) ──
-DATABASE_URL=postgres://locus:locus@localhost:5432/locus
-
-# ── Geo tools (Phase 3; Nominatim/Overpass/Open-Meteo/SunCalc need no key) ──
-ORS_API_KEY=                        # OpenRouteService free key (routing + isochrones)
-
-# ── Basemap (no env needed) ──
-# OpenFreeMap style: https://tiles.openfreemap.org/styles/liberty  (no key, no signup)
-
-# ── Tracing (Langfuse free tier; optional — no-op if unset) ──
-LANGFUSE_PUBLIC_KEY=
-LANGFUSE_SECRET_KEY=
-LANGFUSE_BASEURL=https://cloud.langfuse.com
-```
-
-`src/lib/env.ts` validates these with zod at server startup; LLM keys required only when the chosen
-`LLM_PROVIDER` needs them, Langfuse keys always optional.
+`@rjsf/core`, `@rjsf/utils`, `@rjsf/validator-ajv8`, `ajv` + `ajv-formats`, `@turf/turf` (or scoped
+`@turf/area`, `@turf/boolean-valid`), and `terra-draw` (polygon drawing — pending Q3). No paid APIs.
 
 ---
 
-## 9. LLM provider + local embeddings (Vercel AI SDK)
+## 8. Build order (maps to playbook 1.2 → 1.4)
 
-```ts
-// src/lib/ai/provider.ts — one factory; phases never touch provider details
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-// Ollama via an OpenAI-compatible / community provider pointed at OLLAMA_BASE_URL
-export function getModel() {
-  if (env.LLM_PROVIDER === "ollama") return ollama(env.OLLAMA_MODEL);
-  return google(env.GEMINI_MODEL);            // default: Gemini free tier
-}
-```
-All feature code calls `getModel()` (+ AI SDK `generateText`/`streamText`/tool-calling). Swapping to
-a paid model later (e.g. Claude via `@ai-sdk/anthropic`) is a one-line change here — README promise.
+1. `0001_capture` migration (`forms`, `submissions`) + `getDb` helpers; `db:generate` → augment →
+   `db:migrate` (local docker **and** Supabase).
+2. `/api/generate` + Zod meta-schema guard + retry; prompt box → schema in state → read-only inspector.
+3. RJSF/AJV render + `GeoPointInput`/`GeoPolygonInput` + editable inspector + `/api/submissions` save;
+   test with a field-survey prompt; pin shows on the map.
+4. Capture eval suite (~8) + empty/error/mobile states; deploy (`vercel --prod`); update README.
 
-**Single source of truth for the embedding lock** — model + dimension live in ONE constant so a
-model swap never touches code or schema:
-```ts
-// src/lib/ai/embeddings.config.ts
-export const EMBEDDING = {
-  model: env.EMBEDDINGS_MODEL ?? "Xenova/bge-small-en-v1.5",
-  dim: 384,                       // LOCKED -> vector(384) column in Phase 2
-} as const;
-// Multilingual fallback (PL/UK): "Xenova/multilingual-e5-small" — ALSO 384-d, drops into the same
-// vector(384) column. Swapping = change this constant + run the re-embed script. No migration.
-```
-```ts
-// src/lib/ai/embeddings.ts — local, in-process, no API
-import { pipeline } from "@xenova/transformers";
-import { EMBEDDING } from "./embeddings.config";
-let extractor; // module-level singleton (load once)
-export async function embed(texts: string[]): Promise<number[][]> {
-  extractor ??= await pipeline("feature-extraction", EMBEDDING.model);
-  // mean-pool + normalize -> vectors of length EMBEDDING.dim
-}
-```
-Phase 2's `chunks` table keeps a per-row **`embedding_model`** column (already in its plan), so even
-mixed-model corpora are unambiguous and re-embeds are incremental. That column + this constant are
-the entire hedge — the 384-d lock is never the thing that forces a rewrite.
-Phase 0 only ships these factories + a trivial test (smoke eval calls `embed(["hello"])` and asserts
-vector length). **No retrieval/RAG yet** — that's Phase 2, which will store the model name alongside
-vectors so embeddings are never silently mixed.
+**Definition of done:** type a survey prompt → a valid form renders with a working map location
+field → submit → a `submission` row + `site` pin persists (local and on `locus-dun.vercel.app`);
+`npm run eval -- --module=capture` passes.
 
 ---
 
-## 10. Shared `/evals` skeleton
+## 9. Open questions
 
-A tiny, dependency-light harness the four modules plug into — evals are a first-class concern
-(README). Phase 0 ships the runner + writer + one passing suite.
-
-```ts
-// src/evals/types.ts
-export type EvalCase<I, O> = { name: string; input: I; run: (i: I) => Promise<O>;
-  checks: ((o: O) => { metric: string; pass: boolean; score?: number; note?: string })[] };
-export type Suite = { module: "foundation"|"capture"|"ask"|"act"|"tracks";
-  name: string; cases: EvalCase<any, any>[] };
-export type EvalResult = { module: string; suite: string; case: string;
-  metric: string; pass: boolean; score?: number; note?: string; ts: string };
-```
-
-- **`index.ts`** — central registry; each module appends its suite(s). Phase 0 registers
-  `foundation.smoke` only.
-- **`runner.ts`** (`npm run eval`) — runs all registered suites (or filter by `--module`), collects
-  `EvalResult[]`, prints a per-metric pass/fail summary table, exits non-zero if any case fails.
-- **`writer.ts`** — appends results to `src/evals/results/<timestamp>.jsonl` (gitignored) so runs
-  are diffable over time; later wired to Langfuse (Phase 3).
-- **`foundation.smoke.ts`** — proves the harness end to end without feature logic:
-  - DB reachable + `postgis`/`vector` extensions present (queries `pg_extension`).
-  - `embed(["hello"])` returns a vector of expected dimension.
-  - `getModel()` constructs without throwing (no network call — config only).
-
-Module metric names are reserved now so suites slot in later: Capture `schema_valid ·
-field_coverage · conditional_ok · geo_format_ok`; Ask `recall@k · faithfulness · geo_match ·
-refusal_correct`; Act `task_success · tool_choice · step_efficiency · no_hallucinated_tools`;
-Tracks `metric-vs-hand-calculated`.
-
----
-
-## 11. Phase 0 build order (maps to BUILD_PLAYBOOK 0.2 / 0.3)
-
-1. `create-next-app` (App Router, TS, Tailwind, ESLint, `src/`, `@/*` alias).
-2. shadcn init + base primitives; `globals.css` theme.
-3. docker-compose + initdb SQL; `npm run db:up`; `db:check` passes.
-4. Drizzle config + `schema.ts` (`sites`) + generate + `db:migrate`; `/api/health` green.
-5. MapLibre `map-shell.tsx` + OpenFreeMap style; renders in AppShell.
-6. AppShell + module-nav + four placeholder routes; `npm run dev` boots to a working map.
-7. `lib/ai/provider.ts` + `lib/ai/embeddings.ts` + `lib/env.ts`.
-8. `/evals` runner + writer + `foundation.smoke`; `npm run eval` passes.
-9. **Commit.** (0.3) `scripts/seed.ts` sample sites; Vercel + Supabase/Neon deploy; live URL loads
-   the map and `/api/health` is green.
-
-**Definition of done:** `npm run db:up && npm run db:migrate && npm run dev` → app shell with a live
-OpenFreeMap map, navigable four-module nav, green `/api/health`; `npm run eval` prints a passing
-foundation suite; deployed shell URL loads.
-
----
-
-## 12. Open questions
-
-### Resolved (locked before scaffold)
-- **R1 — DB hosting:** **Supabase** (pooler :6543 provisioned). Prod + `DATABASE_URL`. Neon dropped.
-- **R2 — Embeddings:** **`vector(384)`**, model `bge-small-en-v1.5` via one constant (§9); per-row
-  `embedding_model` in Phase 2. Multilingual fallback `multilingual-e5-small` is also 384-d → swap
-  = config + re-embed, never a migration.
-- **R3 — Local pgvector:** layer onto `postgis/postgis:16-3.4` with a 2-line Dockerfile (§4).
-  Verify on first `db:up`.
-
-### Schema- / data-shape-locking — RESOLVED before scaffold
-- **R4 — Geometry convention for `sites` (LOCKED):**
-  - **SRID 4326** everywhere (WGS84). ✅
-  - **GeoJSON at the API boundary** — read via `ST_AsGeoJSON`, write via `ST_GeomFromGeoJSON`;
-    store native `geometry` internally. ✅
-  - **`sites.geom = geometry(Point, 4326) NOT NULL`** — Point-anchor. Strict validation + fast
-    pin/`ST_DWithin`. If a site ever needs an extent, add a **nullable `area geometry(Polygon,4326)`**
-    column later — additive migration, not a rewrite. Capture's polygon widget values live in
-    submissions, not in `sites.geom`.
-  - **`geometry` for `sites`** (planar ops fine for pins) vs **`geography` for Tracks** (Phase 4,
-    accurate metric distance). Intentional split — no Phase-0 action.
-
-### Non-schema — proceeding on defaults (design / nav / tooling only)
-- **Q1 — Landing route:** `/` redirects to `/capture`. (UI)
-- **Q2 — Ollama:** optional; Gemini default everywhere, even locally. (config)
-- **Q3 — Map theme:** world view + light style for Phase 0; dark map variant wired later. (design)
-- **Q4 — Monorepo trigger:** stay single-app; `packages/locus-mcp/` placeholder only until Phase 3
-  forces a workspace split. (structure)
-- **Q5 — CI:** defer a GitHub Action (typecheck + `npm run eval`) until after 0.3. (tooling)
-
-None of Q1–Q5 touch the database schema or the on-the-wire data shape, so they don't block scaffold.
+1. **Submission → site attachment.** Default **create-or-select**: a designated geo-point creates a
+   new site (named from a form field), with an optional "attach to existing site" picker. Alternative:
+   submissions always pick an existing site (no creation). Confirm the demo flow?
+2. **Persist generated forms, or ephemeral?** Default **persist** (`forms` table → submissions
+   reference `form_id`), which the data model assumes. Ephemeral (generate → fill → submit, no `forms`
+   row) is simpler but loses reuse. Keep persist?
+3. **Polygon drawing library.** Default **`terra-draw`** (MapLibre-native, maintained). Alternative:
+   a minimal custom click-to-draw + Turf validation (zero extra deps, more code). Which?
+4. **JSON-Schema subset scope.** The list in §3 — is `array`-of-objects (nested) in scope for Phase 1,
+   or flat fields + simple arrays only? Default: **flat + simple arrays + `if`/`then`**; defer nested
+   objects to keep RJSF widget wiring simple.
+5. **Eval LLM budget.** Run the ~6 LLM cases live against Gemini free each `npm run eval`, or record
+   fixtures and replay (deterministic, no tokens)? Default: **live with small N + 2 pure-schema
+   cases**; add a `--record` fixture mode later if rate limits bite.
+6. **Which field is the site location** when a form has multiple geo-points? Default: the **first**
+   `geo-point`, overridable via `ui:options.siteLocation: true`. OK?
 ```

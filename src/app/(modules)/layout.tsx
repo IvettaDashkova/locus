@@ -10,7 +10,7 @@ export default function ModulesLayout({ children }: { children: React.ReactNode 
     <AppShell>
       <MapPanel className="absolute inset-0 h-full w-full" />
       <div className="pointer-events-none absolute inset-0 p-4">
-        <div className="pointer-events-auto w-full max-w-md">{children}</div>
+        <div className="pointer-events-auto h-full">{children}</div>
       </div>
     </AppShell>
   );

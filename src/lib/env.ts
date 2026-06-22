@@ -14,7 +14,7 @@ const schema = z.object({
   // LLM provider (AI SDK swaps them — see lib/ai/provider.ts)
   LLM_PROVIDER: z.enum(["gemini", "ollama"]).default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default("gemini-1.5-flash"),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   OLLAMA_BASE_URL: z.string().default("http://localhost:11434"),
   OLLAMA_MODEL: z.string().default("llama3.1"),
 

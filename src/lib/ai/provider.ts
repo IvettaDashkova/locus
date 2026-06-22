@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { env } from "@/lib/env";
 
@@ -18,5 +18,7 @@ export function getModel() {
     });
     return ollama(env.OLLAMA_MODEL);
   }
+  // @ai-sdk/google defaults to GOOGLE_GENERATIVE_AI_API_KEY; we standardize on GEMINI_API_KEY.
+  const google = createGoogleGenerativeAI({ apiKey: env.GEMINI_API_KEY });
   return google(env.GEMINI_MODEL);
 }

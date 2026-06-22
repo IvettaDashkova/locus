@@ -6,7 +6,7 @@ type Props = { title: string; phase: string; blurb: string };
 /** Phase-0 placeholder card shown over the map for each not-yet-built module. */
 export function ModulePlaceholder({ title, phase, blurb }: Props) {
   return (
-    <Card className="bg-card/95 shadow-lg backdrop-blur">
+    <Card className="max-w-md bg-card/95 shadow-lg backdrop-blur">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle>{title}</CardTitle>
