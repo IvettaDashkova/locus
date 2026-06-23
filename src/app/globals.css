@@ -128,3 +128,48 @@
     @apply font-sans;
   }
 }
+
+/* Minimal styling for the (unstyled) RJSF form in Capture. */
+.locus-form label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.locus-form input,
+.locus-form select,
+.locus-form textarea {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  padding: 0.375rem 0.625rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+.locus-form input:focus,
+.locus-form select:focus,
+.locus-form textarea:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+}
+.locus-form input[type="checkbox"],
+.locus-form input[type="radio"] {
+  width: auto;
+  margin: 0 0.4rem 0 0;
+}
+.locus-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.locus-form legend {
+  font-weight: 600;
+}
+.locus-form .text-danger,
+.locus-form .error-detail,
+.locus-form [class*="error"] {
+  color: var(--destructive);
+  font-size: 0.8rem;
+}

@@ -54,8 +54,12 @@ export const emitInput = z.object({
 export type EmitInput = z.infer<typeof emitInput>;
 
 // ── 2. The built JSON Schema (validation guard) ─────────────────────────────
+// Geo fields are built as `type: "object"` (their value is a GeoJSON object), so the built-schema
+// validator must allow "object" even though the LLM never emits it directly.
+const builtFieldType = z.enum(["string", "number", "integer", "boolean", "array", "object"]);
+
 const fieldSchema = z.object({
-  type: fieldType,
+  type: builtFieldType,
   title: z.string().optional(),
   description: z.string().optional(),
   format: z.string().optional(),
@@ -93,18 +97,28 @@ export function buildSchema(input: EmitInput): { jsonSchema: GeneratedSchema; ui
   const required: string[] = [];
 
   for (const f of input.fields) {
-    const prop: FieldSchema = { type: f.type, title: f.title };
+    const isGeo = f.format === GEO_POINT_FORMAT || f.format === GEO_POLYGON_FORMAT;
+    // A geo field's value is a GeoJSON object — render type "object" so AJV accepts it; the custom
+    // RJSF field (keyed off `format`) handles input. Scalar constraints/enum don't apply.
+    const prop: FieldSchema = isGeo
+      ? { type: "object", title: f.title, format: f.format }
+      : { type: f.type, title: f.title };
+
     if (f.description) prop.description = f.description;
-    if (f.format) prop.format = f.format;
-    if (f.enum) prop.enum = f.enum;
-    if (f.minimum !== undefined) prop.minimum = f.minimum;
-    if (f.maximum !== undefined) prop.maximum = f.maximum;
-    if (f.minLength !== undefined) prop.minLength = f.minLength;
-    if (f.maxLength !== undefined) prop.maxLength = f.maxLength;
-    if (f.pattern) prop.pattern = f.pattern;
-    if (f.type === "array" && f.itemType) {
-      prop.items = { type: f.itemType, ...(f.itemEnum ? { enum: f.itemEnum } : {}) };
+
+    if (!isGeo) {
+      if (f.format) prop.format = f.format;
+      if (f.enum) prop.enum = f.enum;
+      if (f.minimum !== undefined) prop.minimum = f.minimum;
+      if (f.maximum !== undefined) prop.maximum = f.maximum;
+      if (f.minLength !== undefined) prop.minLength = f.minLength;
+      if (f.maxLength !== undefined) prop.maxLength = f.maxLength;
+      if (f.pattern) prop.pattern = f.pattern;
+      if (f.type === "array" && f.itemType) {
+        prop.items = { type: f.itemType, ...(f.itemEnum ? { enum: f.itemEnum } : {}) };
+      }
     }
+
     properties[f.name] = prop;
     if (f.required) required.push(f.name);
   }
@@ -143,9 +157,9 @@ export function deriveUiSchema(schema: GeneratedSchema): UiSchema {
         options.siteLocation = true;
         siteLocationPicked = true;
       }
-      ui[key] = { "ui:widget": "geoPoint", "ui:options": options };
+      ui[key] = { "ui:field": "geoPoint", "ui:options": options };
     } else if (field.format === GEO_POLYGON_FORMAT) {
-      ui[key] = { "ui:widget": "geoPolygon" };
+      ui[key] = { "ui:field": "geoPolygon" };
     }
   }
 
