@@ -7,6 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ajv = new Ajv2020({ strict: false, allErrors: true });
+ajv.addFormat("geo-point", true);
+ajv.addFormat("geo-polygon", true);
 
 type Point = { type: "Point"; coordinates: [number, number] };
 

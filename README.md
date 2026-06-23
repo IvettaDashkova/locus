@@ -106,13 +106,24 @@ npm run eval                          # cross-module eval suite
 
 ## Roadmap (build order)
 
-- **Phase 0 — Foundation:** scaffold, PostGIS + pgvector, map shell, design system, evals skeleton.
-- **Phase 1 — Capture:** NL → JSON Schema → RJSF with `geo-point` / `geo-polygon` widgets. *Deploy.*
+- ✅ **Phase 0 — Foundation:** scaffold, PostGIS + pgvector, map shell, design system, evals skeleton. *Live.*
+- ✅ **Phase 1 — Capture:** NL → JSON Schema → RJSF with `geo-point` / `geo-polygon` widgets. *Live.*
 - **Phase 2 — Ask:** ingestion, hybrid + spatial retrieval, cited streaming answers + map. *Deploy.*
 - **Phase 3 — Act:** Locus MCP server (geo tools) + in-app agent with Langfuse tracing. *Deploy.*
 - **Phase 4 — Tracks:** GPX/GeoJSON import, PostGIS metrics, Deck.gl playback, "explain this trip." *Deploy.*
 
-Each phase is independently demoable, so there's always something live.
+Each phase is independently demoable, so there's always something live: **https://locus-dun.vercel.app**
+
+### Capture (Phase 1)
+
+Describe a form in plain English at `/capture`. The configured LLM (Gemini free / Ollama, via the
+Vercel AI SDK) emits a field list through one `emit_schema` tool; the result is Zod-guarded (retry
+once on failure) and built into a JSON Schema, rendered with **RJSF + AJV (draft 2020-12)**. Location
+fields are real map widgets — `geo-point` (click a MapLibre map) and `geo-polygon` (draw with
+terra-draw, area via Turf) — producing GeoJSON. Submissions save to Postgres: the designated
+geo-point creates or selects a `site` and the value is projected into a PostGIS `geometry(Point,4326)`
+column. Evals (`npm run eval -- --module=capture`) cover `schema_valid`, `field_coverage`,
+`conditional_ok`, and `geo_format_ok`.
 
 ## Engineering notes
 
