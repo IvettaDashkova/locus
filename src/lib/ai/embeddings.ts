@@ -23,3 +23,13 @@ export async function embedOne(text: string): Promise<number[]> {
   const [vector] = await embed([text]);
   return vector;
 }
+
+/** Embed documents/passages for storage (applies the model's passage prefix). */
+export async function embedPassages(texts: string[]): Promise<number[][]> {
+  return embed(texts.map((t) => EMBEDDING.passagePrefix + t));
+}
+
+/** Embed a search query (applies the model's query prefix). */
+export async function embedQuery(text: string): Promise<number[]> {
+  return embedOne(EMBEDDING.queryPrefix + text);
+}

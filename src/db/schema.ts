@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
-import { geometry } from "./types";
+import { pgTable, uuid, text, jsonb, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { geometry, vector } from "./types";
 
 /**
  * `sites` — the anchor table for the whole app. Capture submissions, Ask chunks, and Tracks all
@@ -71,3 +71,35 @@ export const submissions = pgTable(
 
 export type Submission = typeof submissions.$inferSelect;
 export type NewSubmission = typeof submissions.$inferInsert;
+
+/**
+ * `chunks` — the Ask (Phase 2) retrieval store: one row per chunked passage from the corpus or
+ * captured data. Three search modalities on one table: `embedding` (pgvector, semantic), `tsv`
+ * (tsvector, keyword — added as a generated column in the migration), `geom` (PostGIS, spatial).
+ * `embedding_model` is pinned per row so mixed-model corpora stay unambiguous.
+ */
+export const chunks = pgTable(
+  "chunks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    source: text("source").notNull(), // 'wikivoyage' | 'osm' | 'site' | 'submission'
+    entryId: text("entry_id").notNull(), // stable id within the source
+    chunkIndex: integer("chunk_index").notNull().default(0),
+    siteId: uuid("site_id").references(() => sites.id, { onDelete: "set null" }),
+    title: text("title"),
+    content: text("content").notNull(), // the only text the LLM sees
+    url: text("url"),
+    embedding: vector(384)("embedding").notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    geom: geometry("geom"), // where the chunk is "about", when known (nullable)
+    license: text("license"), // 'CC-BY-SA' | 'ODbL' | 'internal'
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("chunks_geom_gist").using("gist", t.geom),
+    index("chunks_source_entry").on(t.source, t.entryId),
+  ],
+);
+
+export type Chunk = typeof chunks.$inferSelect;
+export type NewChunk = typeof chunks.$inferInsert;

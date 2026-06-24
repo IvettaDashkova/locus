@@ -1,0 +1,82 @@
+[
+  {
+    "source": "sample",
+    "entryId": "kyiv",
+    "title": "Kyiv",
+    "content": "Kyiv is the capital of Ukraine, set on the Dnieper River. Landmarks include Saint Sophia Cathedral and the Kyiv Pechersk Lavra cave monastery. It is the country's main cultural, financial, and technology hub, with a fast-growing startup scene.",
+    "url": "https://en.wikivoyage.org/wiki/Kyiv",
+    "license": "CC-BY-SA",
+    "lng": 30.5234,
+    "lat": 50.4501
+  },
+  {
+    "source": "sample",
+    "entryId": "lviv",
+    "title": "Lviv",
+    "content": "Lviv is a city in western Ukraine known for its well-preserved historic centre, a UNESCO World Heritage site. It has a strong coffee-house culture, many churches blending architectural styles, and a lively IT industry.",
+    "url": "https://en.wikivoyage.org/wiki/Lviv",
+    "license": "CC-BY-SA",
+    "lng": 24.0297,
+    "lat": 49.8397
+  },
+  {
+    "source": "sample",
+    "entryId": "odesa",
+    "title": "Odesa",
+    "content": "Odesa is a port city on Ukraine's Black Sea coast. It is famous for the Potemkin Stairs, a warm-season beach scene, and a historic multicultural old town. The port makes it a key hub for maritime trade and grain export.",
+    "url": "https://en.wikivoyage.org/wiki/Odesa",
+    "license": "CC-BY-SA",
+    "lng": 30.7233,
+    "lat": 46.4825
+  },
+  {
+    "source": "sample",
+    "entryId": "warsaw",
+    "title": "Warsaw",
+    "content": "Warsaw is the capital of Poland, on the Vistula River. Its Old Town was meticulously rebuilt after World War II and is a UNESCO site. The city is Poland's business and financial centre with a dense cluster of modern skyscrapers.",
+    "url": "https://en.wikivoyage.org/wiki/Warsaw",
+    "license": "CC-BY-SA",
+    "lng": 21.0122,
+    "lat": 52.2297
+  },
+  {
+    "source": "sample",
+    "entryId": "krakow",
+    "title": "Kraków",
+    "content": "Kraków is a city in southern Poland on the Vistula River, long the country's royal capital. Wawel Castle and the large medieval market square anchor a vast, well-preserved old town. Nearby is the Wieliczka Salt Mine.",
+    "url": "https://en.wikivoyage.org/wiki/Krak%C3%B3w",
+    "license": "CC-BY-SA",
+    "lng": 19.945,
+    "lat": 50.0647
+  },
+  {
+    "source": "sample",
+    "entryId": "gdansk",
+    "title": "Gdańsk",
+    "content": "Gdańsk is a port city on Poland's Baltic coast, historically a major Hanseatic trading hub. Its Long Market and brick Gothic architecture draw visitors, and the shipyards are tied to the Solidarity movement.",
+    "url": "https://en.wikivoyage.org/wiki/Gda%C5%84sk",
+    "license": "CC-BY-SA",
+    "lng": 18.6466,
+    "lat": 54.352
+  },
+  {
+    "source": "sample",
+    "entryId": "london",
+    "title": "London",
+    "content": "London is the capital of the United Kingdom, on the River Thames. It is a leading global financial centre and home to landmarks such as the Tower of London, the British Museum, and a dense network of parks and rail links.",
+    "url": "https://en.wikivoyage.org/wiki/London",
+    "license": "CC-BY-SA",
+    "lng": -0.1276,
+    "lat": 51.5072
+  },
+  {
+    "source": "sample",
+    "entryId": "berlin",
+    "title": "Berlin",
+    "content": "Berlin is the capital of Germany, on the Spree River. Known for the Brandenburg Gate, remnants of the Berlin Wall, and a large museum island, it has a thriving arts and startup culture and extensive green spaces.",
+    "url": "https://en.wikivoyage.org/wiki/Berlin",
+    "license": "CC-BY-SA",
+    "lng": 13.405,
+    "lat": 52.52
+  }
+]
