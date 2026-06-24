@@ -35,8 +35,9 @@ export function MapShell({ className, onReady }: MapShellProps) {
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
     });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+    // Bottom-left keeps controls clear of module panels that overlay the right/top of the map.
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     mapRef.current = map;
 
     map.once("load", () => onReadyRef.current?.(map));

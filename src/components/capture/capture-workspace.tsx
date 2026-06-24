@@ -5,6 +5,9 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useI18n } from "@/lib/i18n/provider";
+import { useMapContext } from "@/components/map/map-context";
+
+const RAIL_WIDTH = 320; // matches the w-80 submissions rail
 import { FormStudio, type SaveResult } from "./form-studio";
 import { SubmissionsList, type SubmissionItem } from "./submissions-list";
 import { SubmissionDetail } from "./submission-detail";
@@ -12,6 +15,7 @@ import { SubmissionsLayer } from "./submissions-layer";
 
 export function CaptureWorkspace() {
   const { t } = useI18n();
+  const { map } = useMapContext();
   const [items, setItems] = useState<SubmissionItem[]>([]);
   const [studioOpen, setStudioOpen] = useState(false);
   const [selected, setSelected] = useState<SubmissionItem | null>(null);
@@ -33,6 +37,19 @@ export function CaptureWorkspace() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
+
+  // Reserve the right rail's width in the map camera so pins center in the visible area.
+  useEffect(() => {
+    if (!map) return;
+    map.setPadding({ top: 0, bottom: 0, left: 0, right: RAIL_WIDTH });
+    return () => {
+      try {
+        map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      } catch {
+        /* map may be gone */
+      }
+    };
+  }, [map]);
 
   async function onSaved(result: SaveResult) {
     setStudioOpen(false);
@@ -72,7 +89,10 @@ export function CaptureWorkspace() {
 
       {/* Generation slide-over (left) */}
       <Sheet open={studioOpen} onOpenChange={setStudioOpen}>
-        <SheetContent side="left" className="flex w-[920px] max-w-[94vw] flex-col gap-0 p-0 sm:max-w-[94vw]">
+        <SheetContent
+          side="left"
+          className="flex flex-col gap-0 p-0 data-[side=left]:w-[50vw] data-[side=left]:sm:max-w-[50vw]"
+        >
           <SheetHeader className="border-b">
             <SheetTitle>{t("capture.studioTitle")}</SheetTitle>
             <SheetDescription>{t("capture.studioDesc")}</SheetDescription>
