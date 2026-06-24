@@ -201,3 +201,25 @@
 }
 .locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-group { order: 0; margin: 0; }
 .locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib { order: 1; margin: 0; }
+
+/* Map hover tooltips for submissions */
+.maplibregl-popup-content {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 6px 24px oklch(0 0 0 / 0.12);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8rem;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--card) !important;
+  border-bottom-color: var(--card) !important;
+}
+.locus-popup .title { font-weight: 600; }
+.locus-popup .form { margin-bottom: 0.35rem; font-size: 0.7rem; color: var(--muted-foreground); }
+.locus-popup .row { display: flex; justify-content: space-between; gap: 0.75rem; }
+.locus-popup .row .k { color: var(--muted-foreground); }
+.locus-popup .row .v {
+  max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;
+}

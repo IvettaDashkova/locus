@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "./map-config";
+import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM, applyMapLanguage } from "./map-config";
+import { useI18n } from "@/lib/i18n/provider";
 
 type MapShellProps = {
   className?: string;
@@ -16,9 +17,11 @@ type MapShellProps = {
  * via onReady so feature modules (pins, routes, isochrones, Deck.gl overlay) can attach to it.
  */
 export function MapShell({ className, onReady }: MapShellProps) {
+  const { locale } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onReadyRef = useRef(onReady);
+  const [ready, setReady] = useState(false);
 
   // Keep the latest onReady without re-initializing the map.
   useEffect(() => {
@@ -40,13 +43,22 @@ export function MapShell({ className, onReady }: MapShellProps) {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     mapRef.current = map;
 
-    map.once("load", () => onReadyRef.current?.(map));
+    map.once("load", () => {
+      onReadyRef.current?.(map);
+      setReady(true);
+    });
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setReady(false);
     };
   }, []);
+
+  // Localize place-name labels to the selected language (and on every change).
+  useEffect(() => {
+    if (ready && mapRef.current) applyMapLanguage(mapRef.current, locale);
+  }, [ready, locale]);
 
   return <div ref={containerRef} className={["locus-shell-map", className].filter(Boolean).join(" ")} />;
 }

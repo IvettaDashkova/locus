@@ -15,7 +15,7 @@ const ITEMS: NavItem[] = [
   { href: "/tracks", icon: Route, key: "tracks" },
 ];
 
-export function ModuleNav() {
+export function ModuleNav({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const { t } = useI18n();
   return (
@@ -28,6 +28,7 @@ export function ModuleNav() {
             key={href}
             href={href}
             title={t(`nav.${key}.hint`)}
+            onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",

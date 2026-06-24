@@ -30,6 +30,12 @@ const en: Dict = {
   "act.blurb": "An agent with geo tools (geocode, route, isochrone, nearby, weather) exposed over MCP and used in-app.",
   "tracks.blurb": "Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing.",
 
+  "status.inDevelopment": "In development",
+  "module.intro": "In active development — what it will showcase:",
+  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
+  "tracks.tech": "PostGIS analytics, Deck.gl, stop detection, data-viz",
+
   "capture.newForm": "New form",
   "capture.studioTitle": "Generate a form",
   "capture.studioDesc": "Describe a form in plain English — it’s generated, rendered, and saved with map location fields.",
@@ -86,6 +92,12 @@ const uk: Dict = {
   "act.blurb": "Агент з гео-інструментами (геокодування, маршрут, ізохрона, поруч, погода) через MCP, використовуваний у застосунку.",
   "tracks.blurb": "Імпортуйте GPS-траєкторії, рахуйте метрики руху, відтворюйте їх і отримуйте AI-бриф.",
 
+  "status.inDevelopment": "В розробці",
+  "module.intro": "В активній розробці — що буде показано:",
+  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
+  "tracks.tech": "PostGIS analytics, Deck.gl, stop detection, data-viz",
+
   "capture.newForm": "Нова форма",
   "capture.studioTitle": "Згенерувати форму",
   "capture.studioDesc": "Опишіть форму простою мовою — її згенерує, відрендерить і збереже з полями локації на карті.",
@@ -141,6 +153,12 @@ const pl: Dict = {
   "ask.blurb": "Geoprzestrzenny asystent RAG nad Twoimi danymi i otwartymi źródłami — odpowiedzi z cytatami i mapa wymienionych miejsc.",
   "act.blurb": "Agent z narzędziami geo (geokodowanie, trasa, izochrona, w pobliżu, pogoda) udostępniony przez MCP i używany w aplikacji.",
   "tracks.blurb": "Importuj trajektorie GPS, licz metryki ruchu, odtwarzaj je i otrzymaj briefing AI.",
+
+  "status.inDevelopment": "W rozwoju",
+  "module.intro": "W aktywnym rozwoju — co pokaże:",
+  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
+  "tracks.tech": "PostGIS analytics, Deck.gl, stop detection, data-viz",
 
   "capture.newForm": "Nowy formularz",
   "capture.studioTitle": "Wygeneruj formularz",
