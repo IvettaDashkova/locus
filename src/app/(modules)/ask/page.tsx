@@ -1,5 +1,5 @@
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { AskWorkspace } from "@/components/ask/ask-workspace";
 
 export default function AskPage() {
-  return <ModulePlaceholder module="ask" />;
+  return <AskWorkspace />;
 }

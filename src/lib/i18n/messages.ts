@@ -56,6 +56,17 @@ const en: Dict = {
   "capture.previewEmpty": "Generate a form to preview it here.",
   "capture.fixJson": "Fix the JSON to preview the form.",
 
+  "ask.placeholder": "Ask about places in your data or the open corpus…",
+  "ask.send": "Ask",
+  "ask.searching": "Searching sources…",
+  "ask.sources": "Sources",
+  "ask.empty": "Ask a question — get a cited answer and a map of the places it mentions.",
+  "ask.example1": "What is the capital of Ukraine on the Dnieper?",
+  "ask.example2": "Which port cities are on the Baltic Sea?",
+  "ask.map": "Map",
+  "ask.chat": "Chat",
+  "ask.attribution": "Sources: Wikivoyage (CC BY-SA), OSM (ODbL), and your captured data.",
+
   "list.title": "Submissions",
   "list.empty": "No submissions yet. Create one with “New form”.",
 
@@ -118,6 +129,17 @@ const uk: Dict = {
   "capture.previewEmpty": "Згенеруйте форму, щоб побачити її тут.",
   "capture.fixJson": "Виправте JSON, щоб побачити форму.",
 
+  "ask.placeholder": "Запитайте про місця у ваших даних або відкритому корпусі…",
+  "ask.send": "Запитати",
+  "ask.searching": "Шукаю в джерелах…",
+  "ask.sources": "Джерела",
+  "ask.empty": "Поставте питання — отримаєте відповідь із цитатами й карту згаданих місць.",
+  "ask.example1": "Яка столиця України на Дніпрі?",
+  "ask.example2": "Які портові міста на Балтійському морі?",
+  "ask.map": "Карта",
+  "ask.chat": "Чат",
+  "ask.attribution": "Джерела: Wikivoyage (CC BY-SA), OSM (ODbL) та ваші захоплені дані.",
+
   "list.title": "Записи",
   "list.empty": "Записів ще немає. Створіть перший через «Нова форма».",
 
@@ -179,6 +201,17 @@ const pl: Dict = {
   "capture.saveFailed": "Nie udało się zapisać.",
   "capture.previewEmpty": "Wygeneruj formularz, aby zobaczyć go tutaj.",
   "capture.fixJson": "Popraw JSON, aby zobaczyć formularz.",
+
+  "ask.placeholder": "Zapytaj o miejsca w Twoich danych lub otwartym korpusie…",
+  "ask.send": "Zapytaj",
+  "ask.searching": "Przeszukuję źródła…",
+  "ask.sources": "Źródła",
+  "ask.empty": "Zadaj pytanie — otrzymasz odpowiedź z cytatami i mapę wymienionych miejsc.",
+  "ask.example1": "Jaka jest stolica Ukrainy nad Dnieprem?",
+  "ask.example2": "Które miasta portowe leżą nad Bałtykiem?",
+  "ask.map": "Mapa",
+  "ask.chat": "Czat",
+  "ask.attribution": "Źródła: Wikivoyage (CC BY-SA), OSM (ODbL) i Twoje dane.",
 
   "list.title": "Wpisy",
   "list.empty": "Brak wpisów. Utwórz pierwszy przez „Nowy formularz”.",
