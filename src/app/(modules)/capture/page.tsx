@@ -1,5 +1,5 @@
-import { FormBuilder } from "@/components/capture/form-builder";
+import { CaptureWorkspace } from "@/components/capture/capture-workspace";
 
 export default function CapturePage() {
-  return <FormBuilder />;
+  return <CaptureWorkspace />;
 }

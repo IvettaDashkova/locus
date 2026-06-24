@@ -8,12 +8,14 @@ import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { area as turfArea } from "@turf/turf";
 import type { FieldProps } from "@rjsf/utils";
 import { MAP_STYLE } from "@/components/map/map-config";
+import { useI18n } from "@/lib/i18n/provider";
 
 type Polygon = { type: "Polygon"; coordinates: number[][][] };
 
 /** RJSF custom field: draw a GeoJSON Polygon on the map (terra-draw), with live area (Turf). */
 export function GeoPolygonField(props: FieldProps) {
   const { formData, onChange, fieldPathId, schema, required } = props;
+  const { t } = useI18n();
   // RJSF defaults an empty object field to `{}`; treat only a real GeoJSON Polygon as a value.
   const value = (formData as Polygon | undefined)?.type === "Polygon" ? (formData as Polygon) : undefined;
 
@@ -87,13 +89,11 @@ export function GeoPolygonField(props: FieldProps) {
       <div ref={containerRef} className="h-56 w-full overflow-hidden rounded-md border" />
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          {areaM2 != null
-            ? `Area: ${areaM2.toLocaleString()} m²`
-            : "Click to add points; click the first point to close."}
+          {areaM2 != null ? `${t("geo.area")}: ${areaM2.toLocaleString()} m²` : t("geo.polygon.hint")}
         </span>
         {value ? (
           <button type="button" onClick={clear} className="underline hover:text-foreground">
-            Clear
+            {t("geo.clear")}
           </button>
         ) : null}
       </div>

@@ -12,6 +12,43 @@ ajv.addFormat("geo-polygon", true);
 
 type Point = { type: "Point"; coordinates: [number, number] };
 
+/** First GeoJSON Polygon found among a submission's data values (used for the map when no point). */
+function findPolygon(data: Record<string, unknown> | null): unknown {
+  for (const v of Object.values(data ?? {})) {
+    if (typeof v === "object" && v !== null && (v as { type?: string }).type === "Polygon") return v;
+  }
+  return null;
+}
+
+/** GET → recent submissions for the list, map pins, and detail view. */
+export async function GET() {
+  try {
+    const sql = getClient();
+    const rows = await sql<
+      { id: string; form_name: string; site_name: string | null; data: Record<string, unknown>; geom: string | null; created_at: string }[]
+    >`
+      SELECT s.id, f.name AS form_name, si.name AS site_name,
+             s.data, ST_AsGeoJSON(s.geom) AS geom, s.created_at
+      FROM submissions s
+      JOIN forms f ON f.id = s.form_id
+      LEFT JOIN sites si ON si.id = s.site_id
+      ORDER BY s.created_at DESC
+      LIMIT 100
+    `;
+    const items = rows.map((r) => ({
+      id: r.id,
+      formName: r.form_name,
+      siteName: r.site_name,
+      data: r.data,
+      geometry: r.geom ? JSON.parse(r.geom) : findPolygon(r.data),
+      createdAt: r.created_at,
+    }));
+    return NextResponse.json({ items });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+  }
+}
+
 function isPoint(v: unknown): v is Point {
   return (
     typeof v === "object" &&

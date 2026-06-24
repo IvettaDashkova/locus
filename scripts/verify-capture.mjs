@@ -1,4 +1,4 @@
-// Manual browser verification for Capture (Playwright). Requires the dev server running.
+// Manual browser verification for the Capture workspace (Playwright). Requires the dev server running.
 // Usage: node scripts/verify-capture.mjs  → screenshots in /tmp/verify-capture/
 import { chromium } from "playwright";
 
@@ -13,29 +13,19 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on("pageerror", (e) => console.log("  [pageerror]", e.message));
 
-async function shot(name) {
-  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: false });
-  log("screenshot:", name);
-}
+const shot = async (n) => { await page.screenshot({ path: `${OUT}/${n}.png` }); log("screenshot:", n); };
 
 async function fillRequired() {
-  // Fill text-ish inputs and pick first real option for selects so RJSF "required" is satisfied.
   const inputs = page.locator(".locus-form input");
-  const n = await inputs.count();
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < (await inputs.count()); i++) {
     const el = inputs.nth(i);
     const type = (await el.getAttribute("type")) || "text";
     if (["checkbox", "radio", "file"].includes(type)) continue;
-    if (type === "number") await el.fill("3");
-    else if (type === "url") await el.fill("https://example.com/photo.jpg");
-    else if (type === "email") await el.fill("inspector@example.com");
-    else await el.fill("Verify Harbor Office");
+    await el.fill(type === "number" ? "3" : type === "url" ? "https://example.com/p.jpg" : type === "email" ? "a@b.co" : "Verify Harbor Office");
   }
   const selects = page.locator(".locus-form select");
-  const sn = await selects.count();
-  for (let i = 0; i < sn; i++) {
-    const opts = await selects.nth(i).locator("option").all();
-    for (const o of opts) {
+  for (let i = 0; i < (await selects.count()); i++) {
+    for (const o of await selects.nth(i).locator("option").all()) {
       const v = await o.getAttribute("value");
       if (v) { await selects.nth(i).selectOption(v); break; }
     }
@@ -43,79 +33,56 @@ async function fillRequired() {
 }
 
 try {
-  // 1) initial
   await page.goto(`${BASE}/capture`, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("textarea", { timeout: 20000 });
-  await page.waitForTimeout(2500); // let the shell map paint
-  log("loaded /capture; prompt textarea present:", await page.locator("textarea").first().isVisible());
+  await page.getByRole("button", { name: "New form" }).waitFor({ timeout: 20000 });
+  await page.waitForTimeout(2500);
+  log("loaded; list count:", await page.locator("aside li").count());
   await shot("01-initial");
 
-  // 2) generate a survey form
-  await page.getByRole("button", { name: "Example 1" }).click();
-  log("prompt:", (await page.locator("textarea").first().inputValue()).slice(0, 70), "...");
+  await page.getByRole("button", { name: "New form" }).click();
+  await page.waitForTimeout(800);
+  log("studio open; textarea visible:", await page.locator("textarea").first().isVisible());
+  await shot("02-studio");
+
+  await page.getByRole("button", { name: /Example 1/ }).click();
   await page.getByRole("button", { name: "Generate form" }).click();
-  log("clicked Generate; waiting for form to render…");
+  log("generating…");
   await page.waitForSelector(".locus-form input, .locus-form select", { timeout: 80000 });
   await page.waitForTimeout(1500);
-  const inspectorLen = (await page.locator("textarea").nth(1).inputValue()).length;
-  log("inspector populated, chars:", inspectorLen);
   log("form fields:", await page.locator(".locus-form label").allInnerTexts());
-  await shot("02-generated");
+  await shot("03-generated");
 
-  // 3) + 4) geo-point: click the embedded map
-  const mapCanvas = page.locator(".locus-form canvas.maplibregl-canvas").first();
-  await mapCanvas.waitFor({ state: "visible", timeout: 15000 });
-  await page.waitForTimeout(2500); // map tiles load
-  const box = await mapCanvas.boundingBox();
-  await mapCanvas.click({ position: { x: Math.round(box.width / 2), y: Math.round(box.height / 2) } });
-  await page.waitForTimeout(1500);
-  const coordText = await page.locator(".locus-form").getByText(/lng .*lat/i).first().innerText().catch(() => "(no coord text)");
-  log("after map click, coord text:", coordText);
-  await shot("03-point");
-
-  // 5) fill required + save
-  await fillRequired();
-  await page.waitForTimeout(300);
-  await page.getByRole("button", { name: "Save submission" }).click();
-  log("clicked Save; waiting for result…");
-  const saved = page.getByText(/Saved/i).first();
-  await saved.waitFor({ timeout: 20000 }).catch(() => {});
-  const savedText = await saved.innerText().catch(() => "(no saved message)");
-  const errText = await page.getByText(/match the schema|failed|error/i).first().innerText().catch(() => null);
-  log("save result:", savedText, errText ? `| error: ${errText}` : "");
-  await shot("04-saved");
-
-  // 6) polygon flow
-  await page.locator("textarea").first().fill(
-    "A land parcel record: parcel id, owner, land use, and draw the boundary area on a map.",
-  );
-  await page.getByRole("button", { name: "Generate form" }).click();
-  log("clicked Generate (polygon); waiting…");
-  await page.waitForTimeout(2000);
-  await page.waitForSelector(".locus-form canvas.maplibregl-canvas", { timeout: 80000 });
+  const canvas = page.locator(".locus-form canvas.maplibregl-canvas").first();
+  await canvas.waitFor({ state: "visible", timeout: 15000 });
   await page.waitForTimeout(2500);
-  const polyHint = await page.getByText(/add points|close|Area:/i).first().innerText().catch(() => "(no polygon hint)");
-  log("polygon widget hint:", polyHint);
-  await shot("05-polygon-form");
+  const box = await canvas.boundingBox();
+  await canvas.click({ position: { x: Math.round(box.width / 2), y: Math.round(box.height / 2) } });
+  await page.waitForTimeout(1200);
+  log("coord text:", await page.locator(".locus-form").getByText(/lng .*lat/i).first().innerText().catch(() => "(none)"));
+  await fillRequired();
+  await shot("04-point");
 
-  // draw a polygon: 4 clicks + close on first
-  const polyCanvas = page.locator(".locus-form canvas.maplibregl-canvas").first();
-  const pb = await polyCanvas.boundingBox();
-  const pts = [
-    [pb.width * 0.4, pb.height * 0.35],
-    [pb.width * 0.6, pb.height * 0.35],
-    [pb.width * 0.6, pb.height * 0.6],
-    [pb.width * 0.4, pb.height * 0.6],
-  ];
-  for (const [x, y] of pts) {
-    await polyCanvas.click({ position: { x: Math.round(x), y: Math.round(y) } });
-    await page.waitForTimeout(400);
-  }
-  await polyCanvas.click({ position: { x: Math.round(pts[0][0]), y: Math.round(pts[0][1]) } }); // close
-  await page.waitForTimeout(1500);
-  const areaText = await page.getByText(/Area:/i).first().innerText().catch(() => "(no area yet)");
-  log("after drawing, area text:", areaText);
-  await shot("06-polygon-drawn");
+  await page.getByRole("button", { name: "Save submission" }).click();
+  log("saving…");
+  await page.locator("aside li").first().waitFor({ timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(2000);
+  log("after save — list count:", await page.locator("aside li").count(), "| studio closed:", !(await page.locator("textarea").first().isVisible().catch(() => false)));
+  await shot("05-saved-list");
+
+  await page.locator("aside li button").first().click();
+  await page.waitForTimeout(1000);
+  log("detail dialog:", (await page.getByRole("dialog").innerText().catch(() => "(no dialog)")).replace(/\n+/g, " | ").slice(0, 160));
+  await shot("06-detail");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
+
+  await page.getByRole("button", { name: "Language" }).click();
+  await page.waitForTimeout(400);
+  await page.getByText("Українська").click();
+  await page.waitForTimeout(600);
+  const navText = await page.locator("aside nav").first().innerText().catch(() => "");
+  log("nav after switch to UK:", navText.replace(/\n+/g, " / "));
+  await shot("07-lang-uk");
 
   console.log("\nVERIFY_RESULT: OK");
 } catch (e) {

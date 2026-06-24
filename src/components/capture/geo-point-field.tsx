@@ -5,12 +5,14 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FieldProps } from "@rjsf/utils";
 import { MAP_STYLE } from "@/components/map/map-config";
+import { useI18n } from "@/lib/i18n/provider";
 
 type Point = { type: "Point"; coordinates: [number, number] };
 
 /** RJSF custom field: click the map to set a GeoJSON Point (SRID 4326). */
 export function GeoPointField(props: FieldProps) {
   const { formData, onChange, fieldPathId, schema, required } = props;
+  const { t } = useI18n();
   // RJSF defaults an empty object field to `{}`; treat only a real GeoJSON Point as a value.
   const value = (formData as Point | undefined)?.type === "Point" ? (formData as Point) : undefined;
 
@@ -73,7 +75,7 @@ export function GeoPointField(props: FieldProps) {
       <p className="text-xs text-muted-foreground">
         {value?.coordinates
           ? `lng ${value.coordinates[0].toFixed(5)}, lat ${value.coordinates[1].toFixed(5)}`
-          : "Click the map to set a location."}
+          : t("geo.point.hint")}
       </p>
     </div>
   );
