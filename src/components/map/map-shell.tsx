@@ -48,5 +48,5 @@ export function MapShell({ className, onReady }: MapShellProps) {
     };
   }, []);
 
-  return <div ref={containerRef} className={className} />;
+  return <div ref={containerRef} className={["locus-shell-map", className].filter(Boolean).join(" ")} />;
 }
