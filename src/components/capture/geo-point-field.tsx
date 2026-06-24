@@ -10,16 +10,18 @@ type Point = { type: "Point"; coordinates: [number, number] };
 
 /** RJSF custom field: click the map to set a GeoJSON Point (SRID 4326). */
 export function GeoPointField(props: FieldProps) {
-  const { formData, onChange, schema, required } = props;
-  const value = (formData as Point | undefined) ?? undefined;
+  const { formData, onChange, fieldPathId, schema, required } = props;
+  // RJSF defaults an empty object field to `{}`; treat only a real GeoJSON Point as a value.
+  const value = (formData as Point | undefined)?.type === "Point" ? (formData as Point) : undefined;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
-  // RJSF's onChange is typed for the full (value, errorSchema, id) form; we only set the value.
-  const onChangeRef = useRef<(v: unknown) => void>(onChange as unknown as (v: unknown) => void);
+  // RJSF v6 onChange is (value, path, …): the path scopes the update to THIS field (else it leaks
+  // to the form root). Keep a stable emitter updated each render.
+  const emitRef = useRef<(v: unknown) => void>(() => {});
   useEffect(() => {
-    onChangeRef.current = onChange as unknown as (v: unknown) => void;
+    emitRef.current = (v: unknown) => onChange(v as never, fieldPathId.path);
   });
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export function GeoPointField(props: FieldProps) {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     map.on("click", (e) => {
-      onChangeRef.current({ type: "Point", coordinates: [e.lngLat.lng, e.lngLat.lat] });
+      emitRef.current({ type: "Point", coordinates: [e.lngLat.lng, e.lngLat.lat] });
     });
     mapRef.current = map;
     return () => {

@@ -13,16 +13,18 @@ type Polygon = { type: "Polygon"; coordinates: number[][][] };
 
 /** RJSF custom field: draw a GeoJSON Polygon on the map (terra-draw), with live area (Turf). */
 export function GeoPolygonField(props: FieldProps) {
-  const { formData, onChange, schema, required } = props;
-  const value = (formData as Polygon | undefined) ?? undefined;
+  const { formData, onChange, fieldPathId, schema, required } = props;
+  // RJSF defaults an empty object field to `{}`; treat only a real GeoJSON Polygon as a value.
+  const value = (formData as Polygon | undefined)?.type === "Polygon" ? (formData as Polygon) : undefined;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const drawRef = useRef<TerraDraw | null>(null);
-  // RJSF's onChange is typed for the full (value, errorSchema, id) form; we only set the value.
-  const onChangeRef = useRef<(v: unknown) => void>(onChange as unknown as (v: unknown) => void);
+  // RJSF v6 onChange is (value, path, …): the path scopes the update to THIS field (else it leaks
+  // to the form root). Keep a stable emitter updated each render.
+  const emitRef = useRef<(v: unknown) => void>(() => {});
   useEffect(() => {
-    onChangeRef.current = onChange as unknown as (v: unknown) => void;
+    emitRef.current = (v: unknown) => onChange(v as never, fieldPathId.path);
   });
 
   const [areaM2, setAreaM2] = useState<number | null>(
@@ -52,7 +54,7 @@ export function GeoPolygonField(props: FieldProps) {
       draw.on("finish", (id) => {
         const feature = draw.getSnapshot().find((f) => f.id === id);
         if (feature && feature.geometry.type === "Polygon") {
-          onChangeRef.current(feature.geometry as Polygon);
+          emitRef.current(feature.geometry as Polygon);
           setAreaM2(Math.round(turfArea(feature)));
         }
       });
@@ -70,7 +72,7 @@ export function GeoPolygonField(props: FieldProps) {
   function clear() {
     drawRef.current?.clear();
     setAreaM2(null);
-    onChangeRef.current(undefined);
+    emitRef.current(undefined);
   }
 
   return (
