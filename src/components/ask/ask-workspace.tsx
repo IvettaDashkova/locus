@@ -56,8 +56,8 @@ export function AskWorkspace() {
       {/* Slide-over chat — non-modal, so the map + pins stay visible and interactive */}
       <aside
         className={cn(
-          "pointer-events-auto absolute left-0 top-0 h-full w-full border-r bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
-          open ? "translate-x-0" : "-translate-x-full",
+          "absolute left-0 top-0 h-full w-full border-r bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
+          open ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none",
         )}
         aria-hidden={!open}
       >

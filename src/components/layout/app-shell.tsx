@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <aside className="hidden w-56 shrink-0 border-r bg-card/40 sm:block">
           <ModuleNav />
         </aside>
-        <main className="relative min-w-0 flex-1">{children}</main>
+        <main className="relative min-w-0 flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   );
