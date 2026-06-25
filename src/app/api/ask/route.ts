@@ -4,6 +4,8 @@ import { retrieve } from "@/lib/ask/retrieve";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Allow the embedding model to download + load on a cold serverless instance.
+export const maxDuration = 60;
 
 // Below this best-vector-similarity we decline outright (clearly out-of-corpus). The system prompt
 // is the primary guardrail — it instructs the model to refuse when the sources don't answer.

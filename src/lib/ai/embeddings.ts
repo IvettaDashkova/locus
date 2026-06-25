@@ -1,5 +1,9 @@
-import { pipeline, type FeatureExtractionPipeline } from "@huggingface/transformers";
+import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/transformers";
 import { EMBEDDING } from "./embeddings.config";
+
+// Serverless-friendly: fetch models from the HF CDN and cache to the only writable dir (/tmp).
+env.allowLocalModels = false;
+env.cacheDir = "/tmp/transformers-cache";
 
 /**
  * Local, in-process embeddings via Transformers.js — no API key, no cost, no rate limit.
