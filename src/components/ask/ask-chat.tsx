@@ -45,12 +45,13 @@ export function AskChat({ onSources, onShowMap }: { onSources: (s: AskSource[]) 
       const header = res.headers.get("x-locus-sources");
       if (header) {
         try {
-          sources = JSON.parse(atob(header));
+          // base64 of UTF-8 bytes → decode bytes (atob alone mangles ń/ó/…).
+          const bytes = Uint8Array.from(atob(header), (c) => c.charCodeAt(0));
+          sources = JSON.parse(new TextDecoder().decode(bytes));
         } catch {
           /* ignore */
         }
       }
-      onSources(sources);
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -62,12 +63,22 @@ export function AskChat({ onSources, onShowMap }: { onSources: (s: AskSource[]) 
           acc += decoder.decode(value, { stream: true });
           setMessages((m) => {
             const next = [...m];
-            next[next.length - 1] = { role: "assistant", content: acc, sources };
+            next[next.length - 1] = { role: "assistant", content: acc };
             return next;
           });
           scrollBottom.current?.scrollIntoView({ behavior: "smooth" });
         }
       }
+
+      // Show/plot only the sources actually cited in the answer (not every retrieved candidate).
+      const cited = new Set([...acc.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
+      const usedSources = sources.filter((s) => cited.has(s.n));
+      onSources(usedSources);
+      setMessages((m) => {
+        const next = [...m];
+        next[next.length - 1] = { role: "assistant", content: acc, sources: usedSources };
+        return next;
+      });
     } catch (e) {
       setMessages((m) => {
         const next = [...m];
