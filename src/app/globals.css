@@ -190,17 +190,26 @@
 }
 .maplibregl-ctrl-attrib a { color: var(--muted-foreground); }
 
-/* Shell map: stack the zoom controls ABOVE the attribution in the bottom-left corner, and align
-   their left offset (1rem) with the "New form" button (left-4). */
-.locus-shell-map .maplibregl-ctrl-bottom-left {
+/* Shell map: stack the zoom controls ABOVE the attribution in whichever bottom corner the active
+   module uses, with a 1rem inset matching the overlay buttons. */
+.locus-shell-map .maplibregl-ctrl-bottom-left,
+.locus-shell-map .maplibregl-ctrl-bottom-right {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 0.5rem;
+}
+.locus-shell-map .maplibregl-ctrl-bottom-left {
+  align-items: flex-start;
   padding: 0 0 1rem 1rem;
 }
-.locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-group { order: 0; margin: 0; }
-.locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib { order: 1; margin: 0; }
+.locus-shell-map .maplibregl-ctrl-bottom-right {
+  align-items: flex-end;
+  padding: 0 1rem 1rem 0;
+}
+.locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-group,
+.locus-shell-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group { order: 0; margin: 0; }
+.locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib,
+.locus-shell-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { order: 1; margin: 0; }
 
 /* Map hover tooltips for submissions */
 .maplibregl-popup-content {

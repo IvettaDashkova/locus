@@ -17,8 +17,13 @@ const RAIL_WIDTH = 320; // matches the w-80 submissions rail
 
 export function CaptureWorkspace() {
   const { t } = useI18n();
-  const { map } = useMapContext();
+  const { map, setControlsCorner } = useMapContext();
   const isWide = useMediaQuery("(min-width: 768px)");
+
+  // Capture's panel/rail is on the right → keep map controls on the left.
+  useEffect(() => {
+    setControlsCorner("bottom-left");
+  }, [setControlsCorner]);
 
   const [items, setItems] = useState<SubmissionItem[]>([]);
   const [studioOpen, setStudioOpen] = useState(false);

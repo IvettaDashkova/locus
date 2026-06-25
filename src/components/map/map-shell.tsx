@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM, applyMapLanguage } from "./map-config";
 import { useI18n } from "@/lib/i18n/provider";
+import { useMapContext } from "./map-context";
 
 type MapShellProps = {
   className?: string;
@@ -18,8 +19,10 @@ type MapShellProps = {
  */
 export function MapShell({ className, onReady }: MapShellProps) {
   const { locale } = useI18n();
+  const { controlsCorner } = useMapContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const controlsRef = useRef<{ nav: maplibregl.NavigationControl; attrib: maplibregl.AttributionControl } | null>(null);
   const onReadyRef = useRef(onReady);
   const [ready, setReady] = useState(false);
 
@@ -38,9 +41,6 @@ export function MapShell({ className, onReady }: MapShellProps) {
       zoom: DEFAULT_ZOOM,
       attributionControl: false,
     });
-    // Bottom-left keeps controls clear of module panels that overlay the right/top of the map.
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     mapRef.current = map;
 
     map.once("load", () => {
@@ -51,9 +51,25 @@ export function MapShell({ className, onReady }: MapShellProps) {
     return () => {
       map.remove();
       mapRef.current = null;
+      controlsRef.current = null;
       setReady(false);
     };
   }, []);
+
+  // Place (and reposition) the zoom + attribution controls at the module's chosen corner.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    if (controlsRef.current) {
+      map.removeControl(controlsRef.current.nav);
+      map.removeControl(controlsRef.current.attrib);
+    }
+    const nav = new maplibregl.NavigationControl({ showCompass: false });
+    const attrib = new maplibregl.AttributionControl({ compact: true });
+    map.addControl(nav, controlsCorner);
+    map.addControl(attrib, controlsCorner);
+    controlsRef.current = { nav, attrib };
+  }, [ready, controlsCorner]);
 
   // Localize place-name labels to the selected language (and on every change).
   useEffect(() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Map as MapIcon, Send } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useI18n } from "@/lib/i18n/provider";
@@ -23,7 +23,7 @@ function renderWithCitations(text: string): ReactNode[] {
   });
 }
 
-export function AskChat({ onSources, onShowMap }: { onSources: (s: AskSource[]) => void; onShowMap?: () => void }) {
+export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) => void; onClose?: () => void }) {
   const { t } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -96,10 +96,9 @@ export function AskChat({ onSources, onShowMap }: { onSources: (s: AskSource[]) 
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">{t("nav.ask")}</h2>
-        {onShowMap ? (
-          <Button variant="ghost" size="sm" onClick={onShowMap} className="gap-1.5 md:hidden">
-            <MapIcon className="size-4" />
-            {t("ask.map")}
+        {onClose ? (
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X className="size-4" />
           </Button>
         ) : null}
       </div>
