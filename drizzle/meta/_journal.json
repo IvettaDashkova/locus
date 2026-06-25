@@ -22,6 +22,13 @@
       "when": 1782342010795,
       "tag": "0002_chubby_jack_power",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782374718205,
+      "tag": "0003_high_mercury",
+      "breakpoints": true
     }
   ]
 }

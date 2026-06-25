@@ -31,9 +31,9 @@ export const foundationSmoke: Suite = {
       },
     },
     {
-      name: "embedding config locked to 384-d",
+      name: "embedding config locked to 768-d",
       run: async (): Promise<CheckResult[]> => [
-        { metric: "embedding_dim", pass: EMBEDDING.dim === 384, score: EMBEDDING.dim, note: EMBEDDING.model },
+        { metric: "embedding_dim", pass: EMBEDDING.dim === 768, score: EMBEDDING.dim, note: EMBEDDING.model },
       ],
     },
     {
@@ -45,7 +45,7 @@ export const foundationSmoke: Suite = {
       },
     },
     {
-      name: "local embeddings produce a 384-d vector (offline-tolerant)",
+      name: "embeddings produce a 768-d vector (offline-tolerant)",
       run: async (): Promise<CheckResult[]> => {
         try {
           const { embedOne } = await import("@/lib/ai/embeddings");

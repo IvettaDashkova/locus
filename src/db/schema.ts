@@ -89,7 +89,7 @@ export const chunks = pgTable(
     title: text("title"),
     content: text("content").notNull(), // the only text the LLM sees
     url: text("url"),
-    embedding: vector(384)("embedding").notNull(),
+    embedding: vector(768)("embedding").notNull(),
     embeddingModel: text("embedding_model").notNull(),
     geom: geometry("geom"), // where the chunk is "about", when known (nullable)
     license: text("license"), // 'CC-BY-SA' | 'ODbL' | 'internal'

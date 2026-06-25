@@ -9,7 +9,7 @@ export const maxDuration = 60;
 
 // Below this best-vector-similarity we decline outright (clearly out-of-corpus). The system prompt
 // is the primary guardrail — it instructs the model to refuse when the sources don't answer.
-const MIN_SIMILARITY = 0.75;
+const MIN_SIMILARITY = 0.6;
 
 type Source = {
   n: number;
@@ -45,15 +45,7 @@ export async function POST(req: Request) {
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question) return new Response("A 'question' is required.", { status: 400 });
 
-  let chunks, topSimilarity;
-  try {
-    ({ chunks, topSimilarity } = await retrieve(question, { k: 6 }));
-  } catch (e) {
-    return new Response(`RETRIEVE_ERROR: ${e instanceof Error ? e.stack ?? e.message : String(e)}`, {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
-  }
+  const { chunks, topSimilarity } = await retrieve(question, { k: 6 });
 
   if (!chunks.length || topSimilarity < MIN_SIMILARITY) {
     return new Response("I couldn't find anything about that in the available sources.", {

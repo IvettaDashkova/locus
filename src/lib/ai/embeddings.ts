@@ -1,39 +1,52 @@
-import { pipeline, env, type FeatureExtractionPipeline } from "@huggingface/transformers";
+import { embed as aiEmbed, embedMany as aiEmbedMany } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { env } from "@/lib/env";
 import { EMBEDDING } from "./embeddings.config";
 
-// Serverless-friendly: fetch models from the HF CDN and cache to the only writable dir (/tmp).
-env.allowLocalModels = false;
-env.cacheDir = "/tmp/transformers-cache";
-
 /**
- * Local, in-process embeddings via Transformers.js — no API key, no cost, no rate limit.
- * The model loads once (downloaded + cached on first use) and is reused across calls.
- * Vectors are mean-pooled + L2-normalized, length === EMBEDDING.dim (384).
+ * Embeddings via the Vercel AI SDK (Gemini). Hosted, so they work in serverless functions (no model
+ * to load in the request path). `taskType` asymmetric embeddings improve retrieval: documents are
+ * embedded as RETRIEVAL_DOCUMENT, queries as RETRIEVAL_QUERY. Output dimension = EMBEDDING.dim (768).
  */
-let extractor: Promise<FeatureExtractionPipeline> | null = null;
-
-function getExtractor() {
-  extractor ??= pipeline("feature-extraction", EMBEDDING.model);
-  return extractor;
+function embeddingModel() {
+  const google = createGoogleGenerativeAI({ apiKey: env.GEMINI_API_KEY });
+  return google.textEmbedding(EMBEDDING.model);
 }
 
+type TaskType = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
+
+function providerOptions(taskType?: TaskType) {
+  // gemini-embedding-001 supports Matryoshka truncation; cosine search is scale-invariant so the
+  // truncated vector needs no renormalization.
+  return { google: { outputDimensionality: EMBEDDING.dim, ...(taskType ? { taskType } : {}) } };
+}
+
+async function embedValues(values: string[], taskType?: TaskType): Promise<number[][]> {
+  const { embeddings } = await aiEmbedMany({
+    model: embeddingModel(),
+    values,
+    providerOptions: providerOptions(taskType),
+  });
+  return embeddings;
+}
+
+/** Generic embed (used by the foundation smoke eval). */
 export async function embed(texts: string[]): Promise<number[][]> {
-  const extract = await getExtractor();
-  const output = await extract(texts, { pooling: "mean", normalize: true });
-  return output.tolist() as number[][];
+  return embedValues(texts);
 }
 
 export async function embedOne(text: string): Promise<number[]> {
-  const [vector] = await embed([text]);
-  return vector;
+  const { embedding } = await aiEmbed({ model: embeddingModel(), value: text, providerOptions: providerOptions() });
+  return embedding;
 }
 
-/** Embed documents/passages for storage (applies the model's passage prefix). */
+/** Embed documents/passages for storage. */
 export async function embedPassages(texts: string[]): Promise<number[][]> {
-  return embed(texts.map((t) => EMBEDDING.passagePrefix + t));
+  return embedValues(texts, "RETRIEVAL_DOCUMENT");
 }
 
-/** Embed a search query (applies the model's query prefix). */
+/** Embed a search query. */
 export async function embedQuery(text: string): Promise<number[]> {
-  return embedOne(EMBEDDING.queryPrefix + text);
+  const [v] = await embedValues([text], "RETRIEVAL_QUERY");
+  return v;
 }

@@ -18,8 +18,8 @@ const schema = z.object({
   OLLAMA_BASE_URL: z.string().default("http://localhost:11434"),
   OLLAMA_MODEL: z.string().default("llama3.1"),
 
-  // Local embeddings (Transformers.js — no API). Dimension is pinned in embeddings.config.ts.
-  EMBEDDINGS_MODEL: z.string().default("Xenova/multilingual-e5-small"),
+  // Embeddings via the AI SDK (Gemini). Dimension is pinned in embeddings.config.ts.
+  EMBEDDINGS_MODEL: z.string().default("gemini-embedding-001"),
 
   // Geo tools (Phase 3)
   ORS_API_KEY: z.string().optional(),
