@@ -17,12 +17,14 @@
     "ingest": "tsx scripts/ingest.ts",
     "ask:try": "tsx scripts/ask-try.ts",
     "act:try": "tsx scripts/act-try.ts",
-    "eval": "tsx src/evals/runner.ts"
+    "eval": "tsx src/evals/runner.ts",
+    "mcp": "tsx packages/locus-mcp/src/server.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.83",
     "@ai-sdk/openai-compatible": "^2.0.51",
     "@base-ui/react": "^1.6.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@rjsf/core": "^6.6.2",
     "@rjsf/utils": "^6.6.2",
     "@rjsf/validator-ajv8": "^6.6.2",

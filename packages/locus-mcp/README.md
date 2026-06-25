@@ -1,9 +1,13 @@
-# @locus/mcp (placeholder)
+# @locus/mcp
 
-Reserved for **Phase 3 — Act**: the Locus MCP server exposing geo tools (geocode, places_nearby,
-route, isochrone, elevation, weather, sun_times) as a standalone process for Claude Desktop and
-other MCP clients. The same tool code is also surfaced in-app as Next.js API routes (Vercel can't
-host a long-running MCP process — see FREE_STACK.md).
+The **Locus MCP server**: the seven Locus geo tools (geocode, places_nearby, route, isochrone,
+elevation, weather, sun_times) exposed over stdio for **Claude Desktop** and any MCP client.
 
-No code yet. This directory exists so the foundation reserves the workspace split; npm workspace
-wiring is added when Phase 3 needs it.
+It runs the **same tool code** as the in-app Act agent — `src/lib/act/tools-core.ts` (one
+implementation, two entry points). `route`/`isochrone` need `ORS_API_KEY`; the rest need no key.
+
+```bash
+npm run mcp          # from the repo root
+```
+
+Claude Desktop setup: [`docs/claude-desktop.md`](../../docs/claude-desktop.md).
