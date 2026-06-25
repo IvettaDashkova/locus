@@ -67,6 +67,13 @@ const en: Dict = {
   "ask.chat": "Chat",
   "ask.attribution": "Sources: Wikivoyage (CC BY-SA), OSM (ODbL), and your captured data.",
 
+  "act.placeholder": "Give a location task — e.g. drive time, what's nearby, the weather…",
+  "act.send": "Run",
+  "act.working": "Working…",
+  "act.empty": "Ask the agent a location task. It plans, calls real geo tools, and shows results on the map.",
+  "act.example1": "Drive time from Kyiv to Lviv.",
+  "act.example2": "What's the weather and elevation in Lviv?",
+
   "list.title": "Submissions",
   "list.empty": "No submissions yet. Create one with “New form”.",
 
@@ -140,6 +147,13 @@ const uk: Dict = {
   "ask.chat": "Чат",
   "ask.attribution": "Джерела: Wikivoyage (CC BY-SA), OSM (ODbL) та ваші захоплені дані.",
 
+  "act.placeholder": "Дайте локаційне завдання — напр. час у дорозі, що поруч, погода…",
+  "act.send": "Запустити",
+  "act.working": "Працюю…",
+  "act.empty": "Дайте агенту локаційне завдання. Він планує, викликає справжні гео-інструменти й показує результати на карті.",
+  "act.example1": "Час у дорозі з Києва до Львова.",
+  "act.example2": "Яка погода й висота у Львові?",
+
   "list.title": "Записи",
   "list.empty": "Записів ще немає. Створіть перший через «Нова форма».",
 
@@ -212,6 +226,13 @@ const pl: Dict = {
   "ask.map": "Mapa",
   "ask.chat": "Czat",
   "ask.attribution": "Źródła: Wikivoyage (CC BY-SA), OSM (ODbL) i Twoje dane.",
+
+  "act.placeholder": "Podaj zadanie lokalizacyjne — np. czas dojazdu, co jest w pobliżu, pogoda…",
+  "act.send": "Uruchom",
+  "act.working": "Pracuję…",
+  "act.empty": "Daj agentowi zadanie lokalizacyjne. Planuje, wywołuje prawdziwe narzędzia geo i pokazuje wyniki na mapie.",
+  "act.example1": "Czas dojazdu z Kijowa do Lwowa.",
+  "act.example2": "Jaka jest pogoda i wysokość we Lwowie?",
 
   "list.title": "Wpisy",
   "list.empty": "Brak wpisów. Utwórz pierwszy przez „Nowy formularz”.",

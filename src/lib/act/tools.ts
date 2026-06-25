@@ -78,8 +78,8 @@ async function placesRun({ lat, lng, radiusM, category }: z.infer<typeof placesI
 // ── route (OpenRouteService) ─────────────────────────────────────────────────
 const profile = z.enum(["driving-car", "foot-walking", "cycling-regular"]).default("driving-car");
 const routeInput = z.object({
-  from: z.tuple([z.number(), z.number()]).describe("[lng, lat] start"),
-  to: z.tuple([z.number(), z.number()]).describe("[lng, lat] end"),
+  from: z.array(z.number()).describe("[lng, lat] start"),
+  to: z.array(z.number()).describe("[lng, lat] end"),
   profile,
 });
 async function routeRun({ from, to, profile }: z.infer<typeof routeInput>): Promise<ToolRun> {

@@ -1,5 +1,5 @@
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { ActWorkspace } from "@/components/act/act-workspace";
 
 export default function ActPage() {
-  return <ModulePlaceholder module="act" />;
+  return <ActWorkspace />;
 }
