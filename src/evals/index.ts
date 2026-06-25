@@ -1,6 +1,7 @@
 import type { Suite } from "./types";
 import { foundationSmoke } from "./suites/foundation.smoke";
 import { captureSmoke } from "./suites/capture.smoke";
+import { askSmoke } from "./suites/ask.smoke";
 
 /**
  * The eval registry. Each feature phase appends its suite(s) here:
@@ -9,4 +10,4 @@ import { captureSmoke } from "./suites/capture.smoke";
  *   Act     -> task_success · tool_choice · step_efficiency · no_hallucinated_tools
  *   Tracks  -> metric-vs-hand-calculated
  */
-export const suites: Suite[] = [foundationSmoke, captureSmoke];
+export const suites: Suite[] = [foundationSmoke, captureSmoke, askSmoke];

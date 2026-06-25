@@ -5,7 +5,7 @@
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
 > and trajectory analytics.
 
-**Live demo:** _add URL_ · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · local embeddings (Transformers.js) · MapLibre + OpenFreeMap · Deck.gl · Turf.js · Highcharts
+**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Deck.gl · Turf.js · Highcharts
 
 > **100% free stack** — no paid services. The LLM provider is a one-line swap via the AI SDK, so a
 > paid model (e.g. Claude) can drop in later without rearchitecting. Full mapping in
@@ -108,7 +108,7 @@ npm run eval                          # cross-module eval suite
 
 - ✅ **Phase 0 — Foundation:** scaffold, PostGIS + pgvector, map shell, design system, evals skeleton. *Live.*
 - ✅ **Phase 1 — Capture:** NL → JSON Schema → RJSF with `geo-point` / `geo-polygon` widgets. *Live.*
-- **Phase 2 — Ask:** ingestion, hybrid + spatial retrieval, cited streaming answers + map. *Deploy.*
+- ✅ **Phase 2 — Ask:** ingestion, hybrid + spatial retrieval, cited streaming answers + map. *Live.*
 - **Phase 3 — Act:** Locus MCP server (geo tools) + in-app agent with Langfuse tracing. *Deploy.*
 - **Phase 4 — Tracks:** GPX/GeoJSON import, PostGIS metrics, Deck.gl playback, "explain this trip." *Deploy.*
 
@@ -124,6 +124,19 @@ terra-draw, area via Turf) — producing GeoJSON. Submissions save to Postgres: 
 geo-point creates or selects a `site` and the value is projected into a PostGIS `geometry(Point,4326)`
 column. Evals (`npm run eval -- --module=capture`) cover `schema_valid`, `field_coverage`,
 `conditional_ok`, and `geo_format_ok`.
+
+### Ask (Phase 2)
+
+Ask a question at `/ask` and get a **cited, grounded answer** plus a **map of the places it
+mentions**. `npm run ingest` chunks an open corpus (Wikivoyage CC BY-SA, OSM ODbL) + your captured
+`sites`/`submissions`, embeds them, and stores each chunk with three search modalities on one table:
+**pgvector** (semantic, HNSW), **tsvector** (keyword, GIN), **PostGIS** (`geom`, GiST). A query runs
+vector ∪ keyword search fused with reciprocal-rank fusion (+ optional `ST_DWithin` proximity), then
+the answer is streamed grounded **only** in the retrieved chunks with `[n]` citations; out-of-corpus
+questions are declined, not hallucinated. Cited places drop pins on the shared map. Answers respond
+in the user's language. Embeddings run through the Vercel AI SDK (Gemini `gemini-embedding-001`,
+768-d) so they work on serverless; the model is one swappable constant. Evals
+(`npm run eval -- --module=ask`) cover `recall@k`, `geo_match`, and `refusal_correct`.
 
 ## Engineering notes
 
