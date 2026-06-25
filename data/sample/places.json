@@ -3,7 +3,7 @@
     "source": "sample",
     "entryId": "kyiv",
     "title": "Kyiv",
-    "content": "Kyiv is the capital of Ukraine, set on the Dnieper River. Landmarks include Saint Sophia Cathedral and the Kyiv Pechersk Lavra cave monastery. It is the country's main cultural, financial, and technology hub, with a fast-growing startup scene.",
+    "content": "Kyiv is the capital and largest city of Ukraine, set on the Dnieper River. Landmarks include Saint Sophia Cathedral and the Kyiv Pechersk Lavra cave monastery. It is the country's main cultural, financial, and technology hub, with a fast-growing startup scene.",
     "url": "https://en.wikivoyage.org/wiki/Kyiv",
     "license": "CC-BY-SA",
     "lng": 30.5234,
@@ -33,7 +33,7 @@
     "source": "sample",
     "entryId": "warsaw",
     "title": "Warsaw",
-    "content": "Warsaw is the capital of Poland, on the Vistula River. Its Old Town was meticulously rebuilt after World War II and is a UNESCO site. The city is Poland's business and financial centre with a dense cluster of modern skyscrapers.",
+    "content": "Warsaw is the capital and largest city of Poland, on the Vistula River. Its Old Town was meticulously rebuilt after World War II and is a UNESCO site. The city is Poland's business and financial centre with a dense cluster of modern skyscrapers.",
     "url": "https://en.wikivoyage.org/wiki/Warsaw",
     "license": "CC-BY-SA",
     "lng": 21.0122,
@@ -48,16 +48,6 @@
     "license": "CC-BY-SA",
     "lng": 19.945,
     "lat": 50.0647
-  },
-  {
-    "source": "sample",
-    "entryId": "gdansk",
-    "title": "Gdańsk",
-    "content": "Gdańsk is a port city on Poland's Baltic coast, historically a major Hanseatic trading hub. Its Long Market and brick Gothic architecture draw visitors, and the shipyards are tied to the Solidarity movement.",
-    "url": "https://en.wikivoyage.org/wiki/Gda%C5%84sk",
-    "license": "CC-BY-SA",
-    "lng": 18.6466,
-    "lat": 54.352
   },
   {
     "source": "sample",
@@ -78,5 +68,85 @@
     "license": "CC-BY-SA",
     "lng": 13.405,
     "lat": 52.52
+  },
+  {
+    "source": "sample",
+    "entryId": "gdansk",
+    "title": "Gdańsk",
+    "content": "Gdańsk is a major port city on Poland's Baltic Sea coast, historically a leading Hanseatic trading hub. Its Long Market and brick Gothic architecture draw visitors, and the shipyards are tied to the Solidarity movement.",
+    "url": "https://en.wikivoyage.org/wiki/Gda%C5%84sk",
+    "license": "CC-BY-SA",
+    "lng": 18.6466,
+    "lat": 54.352
+  },
+  {
+    "source": "sample",
+    "entryId": "stpetersburg",
+    "title": "Saint Petersburg",
+    "content": "Saint Petersburg is a major port city on the Baltic Sea, at the head of the Gulf of Finland on the Neva River. It is one of the largest cities on the Baltic, known for the Hermitage Museum, canals, and imperial palaces.",
+    "url": "https://en.wikivoyage.org/wiki/Saint_Petersburg",
+    "license": "CC-BY-SA",
+    "lng": 30.3351,
+    "lat": 59.9343
+  },
+  {
+    "source": "sample",
+    "entryId": "stockholm",
+    "title": "Stockholm",
+    "content": "Stockholm is the capital and largest city of Sweden, a Baltic Sea port spread across fourteen islands where Lake Mälaren meets the sea. Its preserved old town Gamla Stan and strong tech sector make it a regional hub.",
+    "url": "https://en.wikivoyage.org/wiki/Stockholm",
+    "license": "CC-BY-SA",
+    "lng": 18.0686,
+    "lat": 59.3293
+  },
+  {
+    "source": "sample",
+    "entryId": "riga",
+    "title": "Riga",
+    "content": "Riga is the capital and largest city of Latvia, a Baltic Sea port at the mouth of the Daugava River. It is the biggest city in the Baltic states, famous for its Art Nouveau architecture and a UNESCO-listed historic centre.",
+    "url": "https://en.wikivoyage.org/wiki/Riga",
+    "license": "CC-BY-SA",
+    "lng": 24.1052,
+    "lat": 56.9496
+  },
+  {
+    "source": "sample",
+    "entryId": "helsinki",
+    "title": "Helsinki",
+    "content": "Helsinki is the capital and largest city of Finland, a Baltic Sea port on the Gulf of Finland. Known for neoclassical and functionalist architecture, a vibrant design scene, and busy ferry links across the Baltic.",
+    "url": "https://en.wikivoyage.org/wiki/Helsinki",
+    "license": "CC-BY-SA",
+    "lng": 24.9384,
+    "lat": 60.1699
+  },
+  {
+    "source": "sample",
+    "entryId": "tallinn",
+    "title": "Tallinn",
+    "content": "Tallinn is the capital and largest city of Estonia, a Baltic Sea port on the Gulf of Finland. Its remarkably intact medieval old town is a UNESCO site, and the city is a noted digital-government and startup hub.",
+    "url": "https://en.wikivoyage.org/wiki/Tallinn",
+    "license": "CC-BY-SA",
+    "lng": 24.7536,
+    "lat": 59.437
+  },
+  {
+    "source": "sample",
+    "entryId": "gdynia",
+    "title": "Gdynia",
+    "content": "Gdynia is a port city on Poland's Baltic Sea coast, part of the Tricity metropolitan area with Gdańsk and Sopot. Built largely in the 20th century, it has a modernist centre and one of Poland's main seaports.",
+    "url": "https://en.wikivoyage.org/wiki/Gdynia",
+    "license": "CC-BY-SA",
+    "lng": 18.5305,
+    "lat": 54.5189
+  },
+  {
+    "source": "sample",
+    "entryId": "szczecin",
+    "title": "Szczecin",
+    "content": "Szczecin is a port city in north-western Poland near the Baltic Sea, on the Oder River close to the German border. It is one of Poland's largest seaports, with broad boulevards laid out in a star pattern.",
+    "url": "https://en.wikivoyage.org/wiki/Szczecin",
+    "license": "CC-BY-SA",
+    "lng": 14.5528,
+    "lat": 53.4285
   }
 ]
