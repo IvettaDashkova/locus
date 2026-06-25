@@ -45,7 +45,15 @@ export async function POST(req: Request) {
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question) return new Response("A 'question' is required.", { status: 400 });
 
-  const { chunks, topSimilarity } = await retrieve(question, { k: 6 });
+  let chunks, topSimilarity;
+  try {
+    ({ chunks, topSimilarity } = await retrieve(question, { k: 6 }));
+  } catch (e) {
+    return new Response(`RETRIEVE_ERROR: ${e instanceof Error ? e.stack ?? e.message : String(e)}`, {
+      status: 500,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
 
   if (!chunks.length || topSimilarity < MIN_SIMILARITY) {
     return new Response("I couldn't find anything about that in the available sources.", {
