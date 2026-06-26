@@ -1,4 +1,5 @@
 import { runAct } from "@/lib/act/agent";
+import { recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,10 +36,19 @@ export async function POST(req: Request) {
             send({ type: "tool-result", name: part.toolName });
             flushFeatures();
           } else if (part.type === "error") {
-            send({ type: "error", error: String(part.error) });
+            const msg = String(part.error);
+            if (isQuotaError(msg)) void markExhausted();
+            send({ type: "error", error: msg });
           }
         }
         flushFeatures();
+        // One generate_content call per agent step — record the whole task's spend.
+        try {
+          const steps = await result.steps;
+          await recordAiUsage(steps.length);
+        } catch {
+          /* ignore */
+        }
         send({ type: "done" });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });

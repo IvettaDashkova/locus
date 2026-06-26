@@ -86,6 +86,7 @@ export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) =>
         return next;
       });
     } finally {
+      window.dispatchEvent(new Event("locus:ai-used")); // refresh the AI quota badge
       setBusy(false);
     }
   }

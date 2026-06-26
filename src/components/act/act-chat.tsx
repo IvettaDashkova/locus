@@ -67,6 +67,7 @@ export function ActChat({
     } catch (e) {
       patchLast((m) => ({ ...m, content: m.content + `\n⚠ ${e instanceof Error ? e.message : String(e)}` }));
     } finally {
+      window.dispatchEvent(new Event("locus:ai-used")); // refresh the AI quota badge
       setBusy(false);
     }
   }

@@ -55,6 +55,7 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
       setError(e instanceof Error ? e.message : String(e));
       setGenerated(null);
     } finally {
+      window.dispatchEvent(new Event("locus:ai-used")); // refresh the AI quota badge
       setLoading(false);
     }
   }

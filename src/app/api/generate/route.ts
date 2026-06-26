@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateForm } from "@/lib/capture/generate";
+import { recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,9 @@ export async function POST(req: Request) {
   }
 
   const res = await generateForm(prompt);
+  void recordAiUsage(1); // one generate_content round-trip (generateForm retries once on bad output)
   if (!res.ok) {
+    if (isQuotaError(res.error)) void markExhausted();
     return NextResponse.json({ error: `Could not generate a valid schema: ${res.error}` }, { status: 422 });
   }
   return NextResponse.json({ jsonSchema: res.jsonSchema, uiSchema: res.uiSchema });

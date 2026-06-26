@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { getModel } from "@/lib/ai/provider";
 import { retrieve } from "@/lib/ask/retrieve";
+import { recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,10 @@ export async function POST(req: Request) {
     model: getModel(),
     system: `${SYSTEM}\n\nSources:\n${context}`,
     prompt: question,
+    onFinish: ({ steps }) => void recordAiUsage(steps?.length ?? 1),
+    onError: ({ error }) => {
+      if (isQuotaError(String(error))) void markExhausted();
+    },
   });
 
   return result.toTextStreamResponse({ headers: sourcesHeader(sources) });

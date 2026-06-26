@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ModuleNav } from "./module-nav";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { UsageBadge } from "@/components/usage/usage-badge";
 import { useI18n } from "@/lib/i18n/provider";
 
 /** Top bar + left module nav (collapses to a sheet on mobile) + main content region. */
@@ -40,7 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           Locus
         </Link>
         <span className="ml-2 hidden text-xs text-muted-foreground sm:inline">{t("app.subtitle")}</span>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <UsageBadge />
           <ThemeToggle />
           <LanguageSwitcher />
         </div>
