@@ -1,18 +1,8 @@
-import { streamText, stepCountIs } from "ai";
-import { getModel } from "@/lib/ai/provider";
-import { aiTools } from "@/lib/act/tools";
+import { runAct } from "@/lib/act/agent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const SYSTEM = [
-  "You are Locus Act, a geospatial agent. Complete the user's location task using the provided tools.",
-  "- ALWAYS geocode place names to coordinates BEFORE calling route, isochrone, weather, elevation, or sun_times.",
-  "- Coordinates are [lng, lat]. Never invent coordinates, distances, durations, or numbers — get them from tools.",
-  "- Plan → call tools → observe results → iterate until the task is done, then give a concise answer.",
-  "- Answer in the user's language.",
-].join("\n");
 
 export async function POST(req: Request) {
   let body: { task?: unknown };
@@ -24,16 +14,7 @@ export async function POST(req: Request) {
   const task = typeof body.task === "string" ? body.task.trim() : "";
   if (!task) return new Response("A 'task' is required.", { status: 400 });
 
-  const features: GeoJSON.Feature[] = [];
-  const tools = aiTools((fs) => features.push(...fs));
-
-  const result = streamText({
-    model: getModel(),
-    system: SYSTEM,
-    prompt: task,
-    tools,
-    stopWhen: stepCountIs(8),
-  });
+  const { result, features } = runAct(task);
 
   const encoder = new TextEncoder();
   let sent = 0;
