@@ -20,6 +20,10 @@ export type SynthConfig = {
   baseElevationM: number;
   /** Peak-to-trough terrain relief over the route. */
   elevationAmpM: number;
+  /** Emit elevation per fix (default true). Set false for drawn routes where terrain is unknown. */
+  elevation?: boolean;
+  /** Cap the generated fix count — the cadence is coarsened for very long routes (guards drawn routes). */
+  maxPoints?: number;
   stops?: SynthStop[];
   seed: number;
 };
@@ -69,24 +73,33 @@ export function synthesizeTrack(cfg: SynthConfig): SynthTrack {
   }
   let travelled = 0;
 
+  // Coarsen the sampling cadence for very long routes so the fix count stays bounded — a hand-drawn
+  // route at a far-out zoom can otherwise span thousands of km and generate a runaway number of points.
+  let sampleS = cfg.sampleS;
+  if (cfg.maxPoints) {
+    const estPoints = totalM / (cfg.speedMps * sampleS);
+    if (estPoints > cfg.maxPoints) sampleS = (sampleS * estPoints) / cfg.maxPoints;
+  }
+
   const elevationAt = (progress: number, jitter: number) =>
     cfg.baseElevationM +
     cfg.elevationAmpM * (0.6 * Math.sin(progress * Math.PI * 2) + 0.4 * Math.sin(progress * Math.PI * 0.5)) +
     jitter;
 
+  const withElevation = cfg.elevation !== false;
   const pushFix = (lng: number, lat: number) => {
     const progress = totalM > 0 ? travelled / totalM : 0;
     points.push({
       lng,
       lat,
       ts: new Date(t),
-      elevation: Math.round(elevationAt(progress, (rng() - 0.5) * 2) * 10) / 10,
+      elevation: withElevation ? Math.round(elevationAt(progress, (rng() - 0.5) * 2) * 10) / 10 : null,
     });
-    t += cfg.sampleS * 1000;
+    t += sampleS * 1000;
   };
 
   const dwell = (lng: number, lat: number, dwellS: number) => {
-    const n = Math.max(1, Math.round(dwellS / cfg.sampleS));
+    const n = Math.max(1, Math.round(dwellS / sampleS));
     for (let k = 0; k < n; k++) {
       // tiny GPS jitter (~<8 m) so a stop is a real cluster, not a duplicated point.
       pushFix(lng + (rng() - 0.5) * 0.00012, lat + (rng() - 0.5) * 0.00012);
@@ -100,7 +113,7 @@ export function synthesizeTrack(cfg: SynthConfig): SynthTrack {
     const a = cfg.waypoints[i];
     const b = cfg.waypoints[i + 1];
     const legM = haversineM(a, b);
-    const steps = Math.max(1, Math.round(legM / (cfg.speedMps * cfg.sampleS)));
+    const steps = Math.max(1, Math.round(legM / (cfg.speedMps * sampleS)));
 
     // Smoothly varying speed → uneven step fractions that still sum to 1.
     const weights: number[] = [];

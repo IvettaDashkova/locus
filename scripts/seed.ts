@@ -16,7 +16,8 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set (check .env.local)");
 
-  const sql = postgres(url, { max: 1 });
+  // prepare:false keeps us compatible with the Supabase transaction-mode pooler (no prepared statements).
+  const sql = postgres(url, { max: 1, prepare: false });
   try {
     await sql`DELETE FROM sites`;
     for (const [name, category, description, lng, lat] of SAMPLE_SITES) {

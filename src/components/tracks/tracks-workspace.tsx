@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Route, Upload, X, Play, Pause, ChevronLeft, Footprints, Mountain, Bike, Car, Sailboat,
-  Gauge, Clock, TrendingUp, Flag, Layers,
+  Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,8 +13,10 @@ import { useMediaQuery } from "@/lib/use-media-query";
 import { useMapContext } from "@/components/map/map-context";
 import type { TrackSummary, TrackDetail } from "@/lib/tracks/queries";
 import { fmtKm, fmtKmh, fmtM, fmtDuration } from "@/lib/tracks/format";
+import { ACTIVITIES, type Activity } from "@/lib/tracks/presets";
 import { useTrackPlayback } from "@/lib/tracks/use-playback";
 import { TracksLayer } from "./tracks-layer";
+import { RouteBuilderLayer } from "./route-builder-layer";
 import { TrackCharts } from "./track-charts";
 import { TrackExplain } from "./track-explain";
 
@@ -63,6 +65,13 @@ export function TracksWorkspace() {
   const [open, setOpen] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Route builder state.
+  const [building, setBuilding] = useState(false);
+  const [routeName, setRouteName] = useState("");
+  const [routeActivity, setRouteActivity] = useState<Activity>("walk");
+  const [routeWaypoints, setRouteWaypoints] = useState<[number, number][]>([]);
+  const [savingRoute, setSavingRoute] = useState(false);
 
   const playback = useTrackPlayback(selected?.points ?? []);
 
@@ -126,6 +135,41 @@ export function TracksWorkspace() {
     }
   }
 
+  function startBuild() {
+    setSelected(null);
+    setError(null);
+    setRouteName("");
+    setRouteActivity("walk");
+    setRouteWaypoints([]);
+    setBuilding(true);
+  }
+  function cancelBuild() {
+    setBuilding(false);
+    setRouteWaypoints([]);
+  }
+  async function saveRoute() {
+    if (routeWaypoints.length < 2 || savingRoute) return;
+    setSavingRoute(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/tracks/build", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: routeName, activity: routeActivity, waypoints: routeWaypoints }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Build failed");
+      setBuilding(false);
+      setRouteWaypoints([]);
+      await loadTracks();
+      await selectTrack(json.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingRoute(false);
+    }
+  }
+
   const m = selected?.track.metrics ?? null;
 
   return (
@@ -136,6 +180,11 @@ export function TracksWorkspace() {
         heatmap={heatmap}
         showHeatmap={showHeatmap}
         playhead={selected ? playback.position : null}
+      />
+      <RouteBuilderLayer
+        active={building}
+        waypoints={routeWaypoints}
+        onAdd={(lng, lat) => setRouteWaypoints((w) => [...w, [lng, lat]])}
       />
 
       {!open ? (
@@ -163,13 +212,100 @@ export function TracksWorkspace() {
           </div>
 
           <ScrollArea className="min-h-0 flex-1">
-            {!selected ? (
+            {building ? (
+              <div className="space-y-4 p-4">
+                <button
+                  type="button"
+                  onClick={cancelBuild}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft className="size-4" />
+                  {t("tracks.back")}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <Spline className="size-5 text-primary" />
+                  <h3 className="text-base font-semibold">{t("tracks.build.title")}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">{t("tracks.build.hint")}</p>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.build.name")}</label>
+                  <input
+                    value={routeName}
+                    onChange={(e) => setRouteName(e.target.value)}
+                    placeholder={t("tracks.build.namePlaceholder")}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.build.activity")}</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {ACTIVITIES.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setRouteActivity(a)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors",
+                          routeActivity === a ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
+                        )}
+                      >
+                        <ActivityIcon activity={a} className="size-3.5" />
+                        {t(`tracks.activity.${a}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border bg-background/60 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">{t("tracks.build.points", { n: String(routeWaypoints.length) })}</span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setRouteWaypoints((w) => w.slice(0, -1))}
+                      disabled={!routeWaypoints.length}
+                      aria-label={t("tracks.build.undo")}
+                    >
+                      <Undo2 className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setRouteWaypoints([])}
+                      disabled={!routeWaypoints.length}
+                      aria-label={t("tracks.build.clear")}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
+
+                <div className="flex items-center gap-2">
+                  <Button onClick={saveRoute} disabled={routeWaypoints.length < 2 || savingRoute} size="sm" className="gap-2">
+                    <Check className="size-4" />
+                    {savingRoute ? t("tracks.build.saving") : t("tracks.build.save")}
+                  </Button>
+                  <Button onClick={cancelBuild} variant="outline" size="sm">
+                    {t("tracks.build.cancel")}
+                  </Button>
+                </div>
+              </div>
+            ) : !selected ? (
               <div className="space-y-3 p-4">
                 <p className="text-sm text-muted-foreground">{t("tracks.intro")}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button onClick={() => fileRef.current?.click()} disabled={importing} size="sm" className="gap-2">
                     <Upload className="size-4" />
                     {importing ? t("tracks.importing") : t("tracks.import")}
+                  </Button>
+                  <Button onClick={startBuild} variant="outline" size="sm" className="gap-2">
+                    <Spline className="size-4" />
+                    {t("tracks.build")}
                   </Button>
                   <Button
                     onClick={() => setShowHeatmap((v) => !v)}
