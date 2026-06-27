@@ -90,21 +90,22 @@ const RECIPES: Recipe[] = [
     ],
   },
   {
-    name: "Coastal evening drive",
-    description: "A drive down the coast road with a viewpoint stop.",
+    // Inland valley roads (Sonoma wine country) — entirely on land, no water crossings.
+    name: "Wine country evening drive",
+    description: "An evening drive north up the Sonoma valley floor with a viewpoint stop.",
     activity: "drive",
     seed: 404,
     speedMps: 13.5,
     sampleS: 3,
     startTime: "2026-05-15T17:20:00Z",
-    baseElevationM: 30,
-    elevationAmpM: 80,
+    baseElevationM: 60,
+    elevationAmpM: 130,
     waypoints: [
-      [-122.4194, 37.7749], // matches Harbor Field Office, SF
-      [-122.4786, 37.7596],
-      [-122.5107, 37.7363],
-      [-122.5141, 37.708],
-      [-122.4969, 37.6879],
+      [-122.4566, 38.2919], // Sonoma
+      [-122.4863, 38.3329],
+      [-122.4998, 38.3812], // Glen Ellen
+      [-122.4906, 38.4192],
+      [-122.5028, 38.4503], // Kenwood
     ],
     stops: [
       { atWaypoint: 0, dwellS: 120 },
@@ -113,22 +114,22 @@ const RECIPES: Recipe[] = [
     ],
   },
   {
-    name: "Harbour survey boat run",
-    description: "A monitoring loop around the bay with a sampling stop at the buoy.",
+    // Open ocean east of the Sydney Heads (Tasman Sea) — entirely on water, no land/islands.
+    name: "Offshore survey run",
+    description: "An oceanographic survey loop in open water east of Sydney, with a sampling stop.",
     activity: "boat",
     seed: 505,
     speedMps: 4.2,
     sampleS: 5,
     startTime: "2026-05-18T09:00:00Z",
     baseElevationM: 0,
-    elevationAmpM: 1.5,
-    anchorSiteLike: "buoy",
+    elevationAmpM: 1.2,
     waypoints: [
-      [151.2093, -33.8688], // matches Bay Monitoring Buoy, Sydney
-      [151.225, -33.86],
-      [151.24, -33.855],
-      [151.23, -33.845],
-      [151.2093, -33.8688],
+      [151.32, -33.83],
+      [151.36, -33.835],
+      [151.38, -33.865],
+      [151.34, -33.875],
+      [151.32, -33.83],
     ],
     stops: [
       { atWaypoint: 0, dwellS: 200 },

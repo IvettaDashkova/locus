@@ -26,7 +26,8 @@ export type StoredTrack = {
 export async function insertTrack(sql: Sql, input: TrackInput): Promise<StoredTrack> {
   const fixes = input.points;
   if (fixes.length < 2) throw new Error("A track needs at least two points.");
-  const { metrics, segments } = computeTrackMetrics(fixes, { elevDeadbandM: 0 });
+  // 3 m hysteresis threshold suppresses GPS vertical jitter — standard for fitness-device elevation.
+  const { metrics, segments } = computeTrackMetrics(fixes, { elevDeadbandM: 3 });
 
   const startedAt = fixes[0].ts;
   const endedAt = fixes[fixes.length - 1].ts;

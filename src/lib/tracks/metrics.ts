@@ -171,24 +171,33 @@ export function computeTrackMetrics(
     if (v != null && v > maxSpeedMps) maxSpeedMps = v;
   }
 
-  // Elevation gain/loss with an optional deadband to suppress GPS jitter.
-  const deadband = opts.elevDeadbandM ?? 0;
+  // Elevation gain/loss via hysteresis (the standard fitness-device method): only count a rise once
+  // the climb from the last confirmed reference exceeds `threshold`, so GPS vertical jitter doesn't
+  // accumulate into phantom gain — while a real, gradual climb spread over many fixes is still fully
+  // counted. With threshold 0 this is exact per-step summation (used by the hand-calculated evals).
+  const threshold = opts.elevDeadbandM ?? 0;
   let gain = 0;
   let loss = 0;
   let minEl: number | null = null;
   let maxEl: number | null = null;
-  let prevEl: number | null = null;
+  let ref: number | null = null;
   for (const f of fixes) {
     const e = f.elevation ?? null;
     if (e == null) continue;
     minEl = minEl == null ? e : Math.min(minEl, e);
     maxEl = maxEl == null ? e : Math.max(maxEl, e);
-    if (prevEl != null) {
-      const d = e - prevEl;
-      if (d > deadband) gain += d;
-      else if (d < -deadband) loss += -d;
+    if (ref == null) {
+      ref = e;
+      continue;
     }
-    prevEl = e;
+    const d = e - ref;
+    if (d > threshold) {
+      gain += d;
+      ref = e;
+    } else if (d < -threshold) {
+      loss += -d;
+      ref = e;
+    }
   }
 
   const metrics: TrackMetrics = {
