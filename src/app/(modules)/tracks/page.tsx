@@ -1,5 +1,5 @@
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
+import { TracksWorkspace } from "@/components/tracks/tracks-workspace";
 
 export default function TracksPage() {
-  return <ModulePlaceholder module="tracks" />;
+  return <TracksWorkspace />;
 }

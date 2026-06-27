@@ -29,6 +29,13 @@
       "when": 1782374718205,
       "tag": "0003_high_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782508635052,
+      "tag": "0004_minor_black_knight",
+      "breakpoints": true
     }
   ]
 }

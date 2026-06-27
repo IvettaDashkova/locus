@@ -111,7 +111,7 @@ tool (terra-draw + Turf area) — that round-trip as GeoJSON into PostGIS.
 | Capture | ✅ built & deployed |
 | Ask | ✅ built & deployed |
 | Act (agent + 7 tools + MCP) | ✅ built & deployed; Langfuse + Act evals wired, pending a quota window for live numbers |
-| Tracks (GPS analytics, Deck.gl, AI briefing) | 🔜 designed, next phase |
+| Tracks (PostGIS analytics, stop detection, playback, AI briefing) | ✅ built & deployed; metric evals pass against hand-calculated examples |
 
 The only thing gating "100% complete" on Act's live metrics is the Gemini **free-tier daily cap
 (~20 requests/day)** — a deliberate cost constraint of the free stack, not an architectural limit;

@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, jsonb, timestamp, integer, index } from "drizzle-orm/pg-core";
-import { geometry, vector } from "./types";
+import { pgTable, uuid, text, jsonb, timestamp, integer, doublePrecision, index } from "drizzle-orm/pg-core";
+import { geometry, geographyPoint, lineString, geometryAny, vector } from "./types";
 
 /**
  * `sites` — the anchor table for the whole app. Capture submissions, Ask chunks, and Tracks all
@@ -103,3 +103,114 @@ export const chunks = pgTable(
 
 export type Chunk = typeof chunks.$inferSelect;
 export type NewChunk = typeof chunks.$inferInsert;
+
+/**
+ * Computed, grounded trajectory metrics (Phase 4). Stored on `tracks.metrics` so the list/summary
+ * UI and the "explain this trip" prompt read pre-computed numbers — the LLM never does arithmetic.
+ * All distances in metres, durations in seconds, speeds in m/s, elevation in metres. Computed by
+ * `src/lib/tracks/metrics.ts` from the ordered `track_points`.
+ */
+export type TrackMetrics = {
+  pointCount: number;
+  distanceM: number; // total distance over the ground
+  movingDistanceM: number; // distance excluding stopped spans
+  durationS: number; // wall-clock end − start
+  movingTimeS: number;
+  stoppedTimeS: number;
+  avgSpeedMps: number; // movingDistance / movingTime
+  maxSpeedMps: number;
+  elevationGainM: number;
+  elevationLossM: number;
+  minElevationM: number | null;
+  maxElevationM: number | null;
+  stopCount: number;
+  legCount: number;
+};
+
+/**
+ * `tracks` — one GPS trajectory (imported GPX/GeoJSON or synthetic). The ordered fixes live in
+ * `track_points`; `path` is a simplified LineString for rendering and `metrics` holds the computed
+ * summary. Optionally anchored to a `site` (e.g. a trailhead the track starts from).
+ */
+export const tracks = pgTable(
+  "tracks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description"),
+    activity: text("activity"), // 'walk' | 'hike' | 'run' | 'cycle' | 'drive' | 'boat'
+    source: text("source").notNull(), // 'gpx' | 'geojson' | 'synthetic'
+    siteId: uuid("site_id").references(() => sites.id, { onDelete: "set null" }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    path: lineString("path"), // simplified, SRID 4326 (nullable until computed)
+    metrics: jsonb("metrics").$type<TrackMetrics>(),
+    properties: jsonb("properties").$type<Record<string, unknown>>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("tracks_path_gist").using("gist", t.path),
+    index("tracks_site_idx").on(t.siteId),
+  ],
+);
+
+export type Track = typeof tracks.$inferSelect;
+export type NewTrack = typeof tracks.$inferInsert;
+
+/**
+ * `track_points` — the ordered GPS fixes of a track. `geom` is geography(Point) so PostGIS measures
+ * distance on the spheroid in metres. `seq` gives a stable order even if timestamps tie.
+ */
+export const trackPoints = pgTable(
+  "track_points",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    seq: integer("seq").notNull(),
+    ts: timestamp("ts", { withTimezone: true }).notNull(),
+    geom: geographyPoint("geom").notNull(), // POINT, SRID 4326 (geography)
+    elevation: doublePrecision("elevation"), // metres above sea level (nullable)
+    speed: doublePrecision("speed"), // m/s — computed at import, else null
+  },
+  (t) => [
+    index("track_points_track_seq").on(t.trackId, t.seq),
+    index("track_points_geom_gist").using("gist", t.geom),
+  ],
+);
+
+export type TrackPoint = typeof trackPoints.$inferSelect;
+export type NewTrackPoint = typeof trackPoints.$inferInsert;
+
+/**
+ * `segments` — a track split into alternating legs: `move` (a travelled LineString) and `stop`
+ * (a dwell at one clustered Point). Produced by stop-detection (spatial+temporal clustering, see
+ * `src/lib/tracks/metrics.ts`); persisted so playback and charts read them directly.
+ */
+export const segments = pgTable(
+  "segments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    trackId: uuid("track_id")
+      .notNull()
+      .references(() => tracks.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // 'move' | 'stop'
+    seq: integer("seq").notNull(), // order within the track
+    startSeq: integer("start_seq").notNull(), // index into track_points
+    endSeq: integer("end_seq").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }).notNull(),
+    distanceM: doublePrecision("distance_m"),
+    durationS: doublePrecision("duration_s"),
+    geom: geometryAny("geom"), // LineString for 'move', Point for 'stop'
+    properties: jsonb("properties").$type<Record<string, unknown>>().default({}),
+  },
+  (t) => [
+    index("segments_track_seq").on(t.trackId, t.seq),
+    index("segments_geom_gist").using("gist", t.geom),
+  ],
+);
+
+export type Segment = typeof segments.$inferSelect;
+export type NewSegment = typeof segments.$inferInsert;

@@ -1,0 +1,800 @@
+{
+  "id": "0488582b-3a39-44de-a829-b43d18cd0865",
+  "prevId": "69619b4e-39df-4bf1-be58-4fdd0be1a0a6",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.chunks": {
+      "name": "chunks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entry_id": {
+          "name": "entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chunk_index": {
+          "name": "chunk_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(768)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(Point, 4326)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "license": {
+          "name": "license",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "chunks_geom_gist": {
+          "name": "chunks_geom_gist",
+          "columns": [
+            {
+              "expression": "geom",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "chunks_source_entry": {
+          "name": "chunks_source_entry",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "chunks_site_id_sites_id_fk": {
+          "name": "chunks_site_id_sites_id_fk",
+          "tableFrom": "chunks",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.forms": {
+      "name": "forms",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "json_schema": {
+          "name": "json_schema",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ui_schema": {
+          "name": "ui_schema",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.segments": {
+      "name": "segments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_seq": {
+          "name": "start_seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_seq": {
+          "name": "end_seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "distance_m": {
+          "name": "distance_m",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration_s": {
+          "name": "duration_s",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(Geometry, 4326)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "segments_track_seq": {
+          "name": "segments_track_seq",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "segments_geom_gist": {
+          "name": "segments_geom_gist",
+          "columns": [
+            {
+              "expression": "geom",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "segments_track_id_tracks_id_fk": {
+          "name": "segments_track_id_tracks_id_fk",
+          "tableFrom": "segments",
+          "tableTo": "tracks",
+          "columnsFrom": [
+            "track_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sites": {
+      "name": "sites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(Point, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sites_geom_gist": {
+          "name": "sites_geom_gist",
+          "columns": [
+            {
+              "expression": "geom",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.submissions": {
+      "name": "submissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(Point, 4326)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "submissions_geom_gist": {
+          "name": "submissions_geom_gist",
+          "columns": [
+            {
+              "expression": "geom",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "submissions_site_idx": {
+          "name": "submissions_site_idx",
+          "columns": [
+            {
+              "expression": "site_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "submissions_form_idx": {
+          "name": "submissions_form_idx",
+          "columns": [
+            {
+              "expression": "form_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "submissions_form_id_forms_id_fk": {
+          "name": "submissions_form_id_forms_id_fk",
+          "tableFrom": "submissions",
+          "tableTo": "forms",
+          "columnsFrom": [
+            "form_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "submissions_site_id_sites_id_fk": {
+          "name": "submissions_site_id_sites_id_fk",
+          "tableFrom": "submissions",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.track_points": {
+      "name": "track_points",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ts": {
+          "name": "ts",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geography(Point, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "elevation": {
+          "name": "elevation",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "speed": {
+          "name": "speed",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "track_points_track_seq": {
+          "name": "track_points_track_seq",
+          "columns": [
+            {
+              "expression": "track_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "track_points_geom_gist": {
+          "name": "track_points_geom_gist",
+          "columns": [
+            {
+              "expression": "geom",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "track_points_track_id_tracks_id_fk": {
+          "name": "track_points_track_id_tracks_id_fk",
+          "tableFrom": "track_points",
+          "tableTo": "tracks",
+          "columnsFrom": [
+            "track_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tracks": {
+      "name": "tracks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activity": {
+          "name": "activity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "path": {
+          "name": "path",
+          "type": "geometry(LineString, 4326)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metrics": {
+          "name": "metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tracks_path_gist": {
+          "name": "tracks_path_gist",
+          "columns": [
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        },
+        "tracks_site_idx": {
+          "name": "tracks_site_idx",
+          "columns": [
+            {
+              "expression": "site_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tracks_site_id_sites_id_fk": {
+          "name": "tracks_site_id_sites_id_fk",
+          "tableFrom": "tracks",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

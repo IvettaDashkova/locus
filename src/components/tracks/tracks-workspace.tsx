@@ -1,0 +1,283 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Route, Upload, X, Play, Pause, ChevronLeft, Footprints, Mountain, Bike, Car, Sailboat,
+  Gauge, Clock, TrendingUp, Flag, Layers,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/provider";
+import { useMediaQuery } from "@/lib/use-media-query";
+import { useMapContext } from "@/components/map/map-context";
+import type { TrackSummary, TrackDetail } from "@/lib/tracks/queries";
+import { fmtKm, fmtKmh, fmtM, fmtDuration } from "@/lib/tracks/format";
+import { useTrackPlayback } from "@/lib/tracks/use-playback";
+import { TracksLayer } from "./tracks-layer";
+import { TrackCharts } from "./track-charts";
+import { TrackExplain } from "./track-explain";
+
+const PANEL_WIDTH = 420;
+
+function ActivityIcon({ activity, className }: { activity: string | null; className?: string }) {
+  switch (activity) {
+    case "walk":
+    case "run":
+      return <Footprints className={className} />;
+    case "hike":
+      return <Mountain className={className} />;
+    case "cycle":
+      return <Bike className={className} />;
+    case "drive":
+      return <Car className={className} />;
+    case "boat":
+      return <Sailboat className={className} />;
+    default:
+      return <Route className={className} />;
+  }
+}
+
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-background/60 p-2.5">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-0.5 text-sm font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+export function TracksWorkspace() {
+  const { t } = useI18n();
+  const { map, setControlsCorner } = useMapContext();
+  const isWide = useMediaQuery("(min-width: 768px)");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [tracks, setTracks] = useState<TrackSummary[]>([]);
+  const [selected, setSelected] = useState<TrackDetail | null>(null);
+  const [heatmap, setHeatmap] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const playback = useTrackPlayback(selected?.points ?? []);
+
+  const loadTracks = useCallback(async () => {
+    const res = await fetch("/api/tracks", { cache: "no-store" });
+    if (res.ok) setTracks((await res.json()).tracks ?? []);
+  }, []);
+
+  const selectTrack = useCallback(async (id: string) => {
+    const res = await fetch(`/api/tracks/${id}`, { cache: "no-store" });
+    if (res.ok) setSelected(await res.json());
+  }, []);
+
+  useEffect(() => {
+    // Defer out of the effect body so the initial fetches don't set state synchronously on mount.
+    const id = setTimeout(() => {
+      loadTracks();
+      fetch("/api/tracks/heatmap", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => d && setHeatmap(d))
+        .catch(() => {});
+    }, 0);
+    return () => clearTimeout(id);
+  }, [loadTracks]);
+
+  useEffect(() => {
+    setControlsCorner("bottom-right");
+    return () => setControlsCorner("bottom-left");
+  }, [setControlsCorner]);
+
+  useEffect(() => {
+    if (!map) return;
+    map.setPadding({ top: 0, bottom: 0, right: 0, left: open && isWide ? PANEL_WIDTH : 0 });
+    return () => {
+      try {
+        map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      } catch {
+        /* map may be gone */
+      }
+    };
+  }, [map, isWide, open]);
+
+  async function onFile(file: File) {
+    setImporting(true);
+    setError(null);
+    try {
+      const content = await file.text();
+      const res = await fetch("/api/tracks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content, filename: file.name }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Import failed");
+      await loadTracks();
+      await selectTrack(json.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  const m = selected?.track.metrics ?? null;
+
+  return (
+    <>
+      <TracksLayer
+        tracks={tracks}
+        selected={selected}
+        heatmap={heatmap}
+        showHeatmap={showHeatmap}
+        playhead={selected ? playback.position : null}
+      />
+
+      {!open ? (
+        <div className="pointer-events-auto absolute left-4 top-4">
+          <Button onClick={() => setOpen(true)} className="gap-2 shadow-lg">
+            <Route className="size-4" />
+            {t("nav.tracks")}
+          </Button>
+        </div>
+      ) : null}
+
+      <aside
+        className={cn(
+          "absolute left-0 top-0 h-full w-full border-r bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
+          open ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none",
+        )}
+        aria-hidden={!open}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <h2 className="text-sm font-semibold">{t("nav.tracks")}</h2>
+            <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} aria-label="Close">
+              <X className="size-4" />
+            </Button>
+          </div>
+
+          <ScrollArea className="min-h-0 flex-1">
+            {!selected ? (
+              <div className="space-y-3 p-4">
+                <p className="text-sm text-muted-foreground">{t("tracks.intro")}</p>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => fileRef.current?.click()} disabled={importing} size="sm" className="gap-2">
+                    <Upload className="size-4" />
+                    {importing ? t("tracks.importing") : t("tracks.import")}
+                  </Button>
+                  <Button
+                    onClick={() => setShowHeatmap((v) => !v)}
+                    variant={showHeatmap ? "secondary" : "outline"}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Layers className="size-4" />
+                    {t("tracks.heatmap")}
+                  </Button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".gpx,.geojson,.json,application/gpx+xml"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) onFile(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+                {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
+
+                <div className="flex flex-col gap-2 pt-1">
+                  {tracks.map((tr) => (
+                    <button
+                      key={tr.id}
+                      type="button"
+                      onClick={() => selectTrack(tr.id)}
+                      className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+                    >
+                      <ActivityIcon activity={tr.activity} className="size-5 shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{tr.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {tr.metrics ? `${fmtKm(tr.metrics.distanceM)} · ${fmtDuration(tr.metrics.durationS)} · ${tr.metrics.stopCount} stops` : "—"}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                  {!tracks.length ? <p className="text-sm text-muted-foreground">{t("tracks.empty")}</p> : null}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 p-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelected(null);
+                    playback.pause();
+                  }}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft className="size-4" />
+                  {t("tracks.back")}
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <ActivityIcon activity={selected.track.activity} className="size-5 text-primary" />
+                  <h3 className="text-base font-semibold">{selected.track.name}</h3>
+                </div>
+                {selected.track.description ? (
+                  <p className="text-sm text-muted-foreground">{selected.track.description}</p>
+                ) : null}
+
+                {m ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Stat icon={<Route className="size-3.5" />} label={t("tracks.metric.distance")} value={fmtKm(m.distanceM)} />
+                    <Stat icon={<Clock className="size-3.5" />} label={t("tracks.metric.movingTime")} value={fmtDuration(m.movingTimeS)} />
+                    <Stat icon={<Gauge className="size-3.5" />} label={t("tracks.metric.avgSpeed")} value={fmtKmh(m.avgSpeedMps)} />
+                    <Stat icon={<Gauge className="size-3.5" />} label={t("tracks.metric.maxSpeed")} value={fmtKmh(m.maxSpeedMps)} />
+                    <Stat icon={<TrendingUp className="size-3.5" />} label={t("tracks.metric.ascent")} value={fmtM(m.elevationGainM)} />
+                    <Stat icon={<Flag className="size-3.5" />} label={t("tracks.metric.stops")} value={`${m.stopCount}`} />
+                  </div>
+                ) : null}
+
+                <TrackCharts points={selected.points} segments={selected.segments} pointIndex={playback.pointIndex} />
+
+                <TrackExplain trackId={selected.track.id} />
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </aside>
+
+      {selected ? (
+        <div className="pointer-events-auto absolute bottom-6 left-1/2 z-10 flex w-[min(560px,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur md:left-[calc(50%+210px)]">
+          <Button onClick={playback.toggle} size="icon" className="size-9 shrink-0 rounded-full" aria-label={playback.playing ? "Pause" : "Play"}>
+            {playback.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+          </Button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.001}
+            value={playback.progress}
+            onChange={(e) => playback.seek(Number(e.target.value))}
+            className="h-1.5 flex-1 cursor-pointer accent-primary"
+            aria-label={t("tracks.scrubber")}
+          />
+          <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+            {playback.atTime
+              ? playback.atTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : "--:--"}
+          </span>
+        </div>
+      ) : null}
+    </>
+  );
+}

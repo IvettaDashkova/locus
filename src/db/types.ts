@@ -18,6 +18,31 @@ export const geometry = customType<{ data: string; driverData: string }>({
 });
 
 /**
+ * PostGIS `geography(Point, 4326)`. Geography (not geometry) so PostGIS measures distance on the
+ * spheroid in metres — what Tracks needs for trajectory metrics. Same GeoJSON-at-the-boundary
+ * convention as `geometry`. Used by `track_points` (Phase 4).
+ */
+export const geographyPoint = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "geography(Point, 4326)";
+  },
+});
+
+/** PostGIS `geometry(LineString, 4326)` — a simplified track path, rendered as one line. */
+export const lineString = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "geometry(LineString, 4326)";
+  },
+});
+
+/** PostGIS `geometry(Geometry, 4326)` — a segment may be a LineString (a move leg) or a Point (a stop). */
+export const geometryAny = customType<{ data: string; driverData: string }>({
+  dataType() {
+    return "geometry(Geometry, 4326)";
+  },
+});
+
+/**
  * pgvector `vector(N)`. Dimension is pinned by the embedding model (see lib/ai/embeddings.config).
  * Used from Phase 2 onward; defined here so the type is shared.
  */

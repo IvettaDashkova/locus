@@ -5,7 +5,7 @@
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
 > and trajectory analytics.
 
-**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Deck.gl · Turf.js · Highcharts
+**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts
 
 > **100% free stack** — no paid services. The LLM provider is a one-line swap via the AI SDK, so a
 > paid model (e.g. Claude) can drop in later without rearchitecting. Full mapping in
@@ -31,14 +31,14 @@ doesn't care whether you're tracking storefronts, inspections, deliveries or tra
 | **Capture** | Build data-entry forms from a plain-English description; location fields are real map widgets. | Structured LLM output (tool-calling), RJSF + AJV, Zod, GeoJSON |
 | **Ask** | A geospatial RAG assistant over your data + open sources — cited answers *and* a map of mentioned places. | RAG, pgvector, hybrid search, reranking, evals |
 | **Act** | An agent with geo tools (geocode, route, isochrone, nearby, weather) exposed over **MCP** and used in-app. | MCP server, agent orchestration, tool-calling, observability |
-| **Tracks** | Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing. | PostGIS spatial analytics, Deck.gl, data-viz, grounded LLM |
+| **Tracks** | Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing. | PostGIS geography analytics, stay-point stop detection, animated MapLibre playback + density heatmap, grounded LLM |
 
 ## Architecture
 
 ```
                          ┌──────────────────────────────────────────┐
                          │   Next.js (App Router) + TypeScript        │
-                         │   MapLibre / Deck.gl · Vercel AI SDK       │
+                         │   MapLibre GL · Vercel AI SDK              │
                          └───────┬───────────┬───────────┬───────────┘
             Capture ─────────────┘           │           └───────────── Tracks
             (RJSF + geo widgets)             │                          (import → metrics → playback)
@@ -99,7 +99,9 @@ cp .env.example .env.local            # GEMINI_API_KEY (or Ollama), DATABASE_URL
 docker compose up -d                  # Postgres + PostGIS + pgvector
 npm install
 npm run db:migrate
-npm run seed                          # sample sites, corpus, tracks
+npm run seed                          # sample sites
+npm run seed:tracks                   # synthetic GPS tracks for the Tracks module
+npm run ingest                        # embed the corpus for Ask
 npm run dev                           # http://localhost:3000
 npm run eval                          # cross-module eval suite
 ```
@@ -109,8 +111,8 @@ npm run eval                          # cross-module eval suite
 - ✅ **Phase 0 — Foundation:** scaffold, PostGIS + pgvector, map shell, design system, evals skeleton. *Live.*
 - ✅ **Phase 1 — Capture:** NL → JSON Schema → RJSF with `geo-point` / `geo-polygon` widgets. *Live.*
 - ✅ **Phase 2 — Ask:** ingestion, hybrid + spatial retrieval, cited streaming answers + map. *Live.*
-- **Phase 3 — Act:** Locus MCP server (geo tools) + in-app agent with Langfuse tracing. *Deploy.*
-- **Phase 4 — Tracks:** GPX/GeoJSON import, PostGIS metrics, Deck.gl playback, "explain this trip." *Deploy.*
+- ✅ **Phase 3 — Act:** Locus MCP server (geo tools) + in-app agent with Langfuse tracing. *Live.*
+- ✅ **Phase 4 — Tracks:** GPX/GeoJSON import, PostGIS geography metrics + stay-point stop detection, animated MapLibre playback + density heatmap, custom SVG profiles, grounded "explain this trip." *Live.*
 
 Each phase is independently demoable, so there's always something live: **https://locus-dun.vercel.app**
 
@@ -137,6 +139,40 @@ questions are declined, not hallucinated. Cited places drop pins on the shared m
 in the user's language. Embeddings run through the Vercel AI SDK (Gemini `gemini-embedding-001`,
 768-d) so they work on serverless; the model is one swappable constant. Evals
 (`npm run eval -- --module=ask`) cover `recall@k`, `geo_match`, and `refusal_correct`.
+
+### Act (Phase 3)
+
+Give a location task at `/act` (e.g. *"drive time from Kyiv to Lviv"*). An agent (Vercel AI SDK,
+`streamText` + tool-calling, bounded steps) plans and calls **real geo tools** — geocode, route,
+isochrone, nearby, weather, elevation, sun times — streaming its reasoning, the tools it picks, and
+GeoJSON results onto the shared map. The same seven tools are exposed over a **stdio MCP server**
+(`packages/locus-mcp`) so Claude Desktop can drive them too — one tool core, two surfaces. Runs are
+traced with **Langfuse** (OpenTelemetry) and checked by evals (`task_success`, `tool_choice`,
+`no_hallucinated_tools`, `step_efficiency`).
+
+### Tracks (Phase 4)
+
+Pick a sample track or import a **GPX/GeoJSON** file at `/tracks`. Everything downstream is computed
+server-side and grounded:
+
+- **PostGIS analytics.** Fixes are stored as `geography(Point,4326)` so distances are measured on
+  the spheroid in metres; the path is a simplified `geometry(LineString)` (Douglas–Peucker) for
+  rendering. A pure-TypeScript metrics service computes total/moving distance, moving vs. stopped
+  time, average/max speed, and elevation gain/loss.
+- **Stop detection** is a stay-point clustering (Li et al.) — a maximal run of fixes within a radius
+  that spans a minimum dwell — *not* a speed threshold, so a slow crawl isn't a "stop" and a brief
+  pause at a light isn't either. The track is split into alternating **move**/**stop** segments.
+- **Animated playback** over the map: the marker is interpolated by *real elapsed time*, so it
+  visibly lingers where the traveller dwelled. A scrubber + play/pause drive it; a multi-track
+  **density heatmap** (native MapLibre) shows where many tracks overlap.
+- **Charts** are dependency-free inline **SVG** — elevation and speed profiles over distance, plus a
+  move/stop dwell timeline, all cursored to the playback head.
+- **"Explain this trip"** streams a plain-language briefing from the LLM, handed the *computed*
+  metrics as grounded facts and forbidden from doing arithmetic of its own.
+
+Metrics are verified by evals against **hand-calculated worked examples**
+(`npm run eval -- --module=tracks`): distance/speed, elevation gain/loss, and the stop-detection
+min-dwell gate. Seed synthetic tracks with `npm run seed:tracks`.
 
 ## Engineering notes
 
