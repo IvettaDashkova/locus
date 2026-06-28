@@ -79,9 +79,14 @@ four toy repos.
   runs for anyone at zero cost — see [`FREE_STACK.md`](./FREE_STACK.md).
 - **Evals are a first-class, cross-cutting concern**, not a per-feature afterthought (see below).
 
-## Evals
+## Tests & evals
 
-A shared eval harness (`/evals`) covers each module:
+Two complementary layers:
+
+- **Unit tests** (`npm test`, Vitest) cover the pure logic — trajectory metrics, stay-point stop
+  detection, elevation hysteresis, GPX/GeoJSON parsing, the synthetic-track generator, activity
+  presets, and marine routing — with hand-calculated worked examples. Fast, deterministic, no DB.
+- **Eval harness** (`npm run eval`) exercises each module end-to-end (some steps hit the LLM):
 
 | Module | Key metrics |
 | --- | --- |
@@ -127,6 +132,7 @@ npm run seed                          # sample sites
 npm run seed:tracks                   # synthetic GPS tracks for the Tracks module
 npm run ingest                        # embed the corpus for Ask
 npm run dev                           # http://localhost:3000
+npm test                              # unit tests (Vitest) — no DB/LLM needed
 npm run eval                          # cross-module eval suite
 ```
 
