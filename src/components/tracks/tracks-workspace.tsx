@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Route, Upload, X, Play, Pause, ChevronLeft, Footprints, Mountain, Bike, Car, Sailboat,
+  Route, Upload, X, Play, Pause, Footprints, Mountain, Bike, Car, Sailboat,
   Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2, MousePointerClick,
+  PanelRightOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -23,7 +26,8 @@ import { PlaceSearch } from "./place-search";
 import { TrackCharts } from "./track-charts";
 import { TrackExplain } from "./track-explain";
 
-const PANEL_WIDTH = 420;
+const FORM_WIDTH = 420; // left builder/detail panel
+const RAIL_WIDTH = 320; // right list rail (matches Capture's w-80)
 
 function ActivityIcon({ activity, className }: { activity: string | null; className?: string }) {
   switch (activity) {
@@ -66,7 +70,7 @@ export function TracksWorkspace() {
   const [selected, setSelected] = useState<TrackDetail | null>(null);
   const [heatmap, setHeatmap] = useState<GeoJSON.FeatureCollection | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false); // mobile list sheet
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +83,9 @@ export function TracksWorkspace() {
   const [savingRoute, setSavingRoute] = useState(false);
   const previewSeq = useRef(0);
 
+  // The left panel (builder or selected-track detail) is open whenever one of those is active.
+  const formOpen = building || Boolean(selected);
+
   const playback = useTrackPlayback(selected?.points ?? []);
 
   const loadTracks = useCallback(async () => {
@@ -90,6 +97,13 @@ export function TracksWorkspace() {
     const res = await fetch(`/api/tracks/${id}`, { cache: "no-store" });
     if (res.ok) setSelected(await res.json());
   }, []);
+
+  // Open a track from the list: leave the builder, load detail, close the mobile sheet.
+  const openTrack = useCallback((id: string) => {
+    setBuilding(false);
+    setListOpen(false);
+    selectTrack(id);
+  }, [selectTrack]);
 
   useEffect(() => {
     // Defer out of the effect body so the initial fetches don't set state synchronously on mount.
@@ -104,14 +118,19 @@ export function TracksWorkspace() {
   }, [loadTracks]);
 
   useEffect(() => {
-    // Panel is on the right (like Capture) → keep map controls on the left.
     setControlsCorner("bottom-left");
     return () => setControlsCorner("bottom-left");
   }, [setControlsCorner]);
 
   useEffect(() => {
     if (!map) return;
-    map.setPadding({ top: 0, bottom: 0, left: 0, right: open && isWide ? PANEL_WIDTH : 0 });
+    // Reserve the persistent right list rail, and the left form panel while it's open.
+    map.setPadding({
+      top: 0,
+      bottom: 0,
+      left: formOpen && isWide ? FORM_WIDTH : 0,
+      right: isWide ? RAIL_WIDTH : 0,
+    });
     return () => {
       try {
         map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
@@ -119,7 +138,7 @@ export function TracksWorkspace() {
         /* map may be gone */
       }
     };
-  }, [map, isWide, open]);
+  }, [map, isWide, formOpen]);
 
   async function onFile(file: File) {
     if (!isLoggedIn) return; // SignInHint is shown; importing requires an account
@@ -216,6 +235,40 @@ export function TracksWorkspace() {
 
   const m = selected?.track.metrics ?? null;
 
+  // The track list — reused by the persistent desktop rail and the mobile sheet.
+  const trackList = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <h2 className="text-sm font-semibold">{t("nav.tracks")}</h2>
+        <Badge variant="outline">{tracks.length}</Badge>
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-2 p-3">
+          {tracks.map((tr) => (
+            <button
+              key={tr.id}
+              type="button"
+              onClick={() => openTrack(tr.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent",
+                selected?.track.id === tr.id && "border-primary bg-primary/5",
+              )}
+            >
+              <ActivityIcon activity={tr.activity} className="size-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{tr.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {tr.metrics ? `${fmtKm(tr.metrics.distanceM)} · ${fmtDuration(tr.metrics.durationS)} · ${tr.metrics.stopCount} stops` : "—"}
+                </div>
+              </div>
+            </button>
+          ))}
+          {!tracks.length ? <p className="px-1 text-sm text-muted-foreground">{t("tracks.empty")}</p> : null}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
   return (
     <>
       <TracksLayer
@@ -227,8 +280,20 @@ export function TracksWorkspace() {
       />
       <RouteBuilderLayer active={building} waypoints={routeWaypoints} routedPath={routedPath} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
 
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".gpx,.geojson,.json,application/gpx+xml"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.target.value = "";
+        }}
+      />
+
       {building ? (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%-210px)]">
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%+50px)]">
           <span className="inline-flex items-center gap-2 rounded-full border bg-card/95 px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur">
             <MousePointerClick className="size-4 text-primary" />
             {t("tracks.build.mapHint", { n: String(routeWaypoints.length) })}
@@ -236,26 +301,66 @@ export function TracksWorkspace() {
         </div>
       ) : null}
 
-      {!open ? (
-        <div className="pointer-events-auto absolute right-4 top-4">
-          <Button onClick={() => setOpen(true)} className="gap-2 shadow-lg">
-            <Route className="size-4" />
-            {t("nav.tracks")}
-          </Button>
+      {/* Left action buttons — shown when the left panel is closed (matches Capture's "+ New form"). */}
+      {!formOpen ? (
+        <div className="pointer-events-auto absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-col items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => fileRef.current?.click()} disabled={importing} className="gap-2 shadow-lg">
+              <Upload className="size-4" />
+              {importing ? t("tracks.importing") : t("tracks.import")}
+            </Button>
+            <Button onClick={startBuild} variant="secondary" className="gap-2 shadow-lg">
+              <Spline className="size-4" />
+              {t("tracks.build")}
+            </Button>
+            <Button
+              onClick={() => setShowHeatmap((v) => !v)}
+              variant={showHeatmap ? "secondary" : "outline"}
+              className="gap-2 shadow-lg"
+            >
+              <Layers className="size-4" />
+              {t("tracks.heatmap")}
+            </Button>
+          </div>
+          {!isLoggedIn ? <div className="max-w-xs"><SignInHint callbackUrl="/tracks" /></div> : null}
+          {error ? <p className="rounded-md border border-destructive/40 bg-card/95 px-3 py-2 text-sm text-destructive shadow-lg backdrop-blur">⚠ {error}</p> : null}
         </div>
       ) : null}
 
+      {/* Mobile: open the track list */}
+      <div className="pointer-events-auto absolute right-4 top-4 md:hidden">
+        <Button variant="secondary" onClick={() => setListOpen(true)} className="gap-2 shadow-lg">
+          <PanelRightOpen className="size-4" />
+          {t("nav.tracks")}
+          <Badge variant="outline">{tracks.length}</Badge>
+        </Button>
+      </div>
+
+      {/* Left panel: route builder OR selected-track detail */}
       <aside
         className={cn(
-          "absolute right-0 top-0 h-full w-full border-l bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
-          open ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none",
+          "absolute left-0 top-0 h-full w-full border-r bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
+          formOpen ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none",
         )}
-        aria-hidden={!open}
+        aria-hidden={!formOpen}
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
-            <h2 className="text-sm font-semibold">{t("nav.tracks")}</h2>
-            <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)} aria-label="Close">
+            <h2 className="truncate text-sm font-semibold">
+              {building ? t("tracks.build.title") : (selected?.track.name ?? t("nav.tracks"))}
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => {
+                if (building) cancelBuild();
+                else {
+                  setSelected(null);
+                  playback.pause();
+                }
+              }}
+              aria-label="Close"
+            >
               <X className="size-4" />
             </Button>
           </div>
@@ -263,19 +368,6 @@ export function TracksWorkspace() {
           <ScrollArea className="min-h-0 flex-1">
             {building ? (
               <div className="space-y-4 p-4">
-                <button
-                  type="button"
-                  onClick={cancelBuild}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <ChevronLeft className="size-4" />
-                  {t("tracks.back")}
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <Spline className="size-5 text-primary" />
-                  <h3 className="text-base font-semibold">{t("tracks.build.title")}</h3>
-                </div>
                 <p className="text-sm text-muted-foreground">{t("tracks.build.hint")}</p>
 
                 <div className="space-y-1.5">
@@ -350,76 +442,8 @@ export function TracksWorkspace() {
                   </Button>
                 </div>
               </div>
-            ) : !selected ? (
-              <div className="space-y-3 p-4">
-                <p className="text-sm text-muted-foreground">{t("tracks.intro")}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button onClick={() => fileRef.current?.click()} disabled={importing} size="sm" className="gap-2">
-                    <Upload className="size-4" />
-                    {importing ? t("tracks.importing") : t("tracks.import")}
-                  </Button>
-                  <Button onClick={startBuild} variant="outline" size="sm" className="gap-2">
-                    <Spline className="size-4" />
-                    {t("tracks.build")}
-                  </Button>
-                  <Button
-                    onClick={() => setShowHeatmap((v) => !v)}
-                    variant={showHeatmap ? "secondary" : "outline"}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Layers className="size-4" />
-                    {t("tracks.heatmap")}
-                  </Button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".gpx,.geojson,.json,application/gpx+xml"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onFile(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
-                {!isLoggedIn ? <SignInHint callbackUrl="/tracks" /> : null}
-                {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
-
-                <div className="flex flex-col gap-2 pt-1">
-                  {tracks.map((tr) => (
-                    <button
-                      key={tr.id}
-                      type="button"
-                      onClick={() => selectTrack(tr.id)}
-                      className="flex items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
-                    >
-                      <ActivityIcon activity={tr.activity} className="size-5 shrink-0 text-primary" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{tr.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {tr.metrics ? `${fmtKm(tr.metrics.distanceM)} · ${fmtDuration(tr.metrics.durationS)} · ${tr.metrics.stopCount} stops` : "—"}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                  {!tracks.length ? <p className="text-sm text-muted-foreground">{t("tracks.empty")}</p> : null}
-                </div>
-              </div>
-            ) : (
+            ) : selected ? (
               <div className="space-y-4 p-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelected(null);
-                    playback.pause();
-                  }}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <ChevronLeft className="size-4" />
-                  {t("tracks.back")}
-                </button>
-
                 <div className="flex items-center gap-2">
                   <ActivityIcon activity={selected.track.activity} className="size-5 text-primary" />
                   <h3 className="text-base font-semibold">{selected.track.name}</h3>
@@ -443,13 +467,28 @@ export function TracksWorkspace() {
 
                 <TrackExplain trackId={selected.track.id} />
               </div>
-            )}
+            ) : null}
           </ScrollArea>
         </div>
       </aside>
 
+      {/* Right rail: the track list, always visible on desktop (like the Capture submissions list) */}
+      <aside className="pointer-events-auto absolute right-0 top-0 hidden h-full w-80 border-l bg-card/95 shadow-xl backdrop-blur md:block">
+        {trackList}
+      </aside>
+
+      {/* Mobile: track list in a sheet */}
+      <Sheet open={listOpen} onOpenChange={setListOpen}>
+        <SheetContent side="right" className="w-80 max-w-[88vw] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{t("nav.tracks")}</SheetTitle>
+          </SheetHeader>
+          {trackList}
+        </SheetContent>
+      </Sheet>
+
       {selected ? (
-        <div className="pointer-events-auto absolute bottom-6 left-1/2 z-10 flex w-[min(560px,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur md:left-[calc(50%-210px)]">
+        <div className="pointer-events-auto absolute bottom-6 left-1/2 z-10 flex w-[min(560px,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur md:left-[calc(50%+50px)]">
           <Button onClick={playback.toggle} size="icon" className="size-9 shrink-0 rounded-full" aria-label={playback.playing ? "Pause" : "Play"}>
             {playback.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
           </Button>
