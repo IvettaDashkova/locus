@@ -9,6 +9,8 @@ see `quota` / 429 errors, wait for the daily reset or use a second key / `LLM_PR
 ```bash
 npm run db:up          # local Postgres (PostGIS + pgvector) on :5433, or point DATABASE_URL at Supabase
 npm run db:migrate     # apply schema (extensions, tables, indexes)
+npm run seed           # sample sites
+npm run seed:tracks    # synthetic GPS tracks for the Tracks module (no LLM)
 npm run ingest         # embed + load the sample corpus (needs quota — ~1 batch of embeddings)
 npm run dev            # http://localhost:3000
 ```
@@ -124,10 +126,67 @@ green when the free tier is down — real passes need available quota. Results a
 
 ---
 
-## 7. Cross-cutting
+## 7. Tracks — trajectory analytics
 
+Most of this needs **no LLM** (metrics, playback, routing are all computed) — only *Explain this
+trip* hits Gemini. Run `npm run seed:tracks` first so the list isn't empty.
+
+**a. Browse + analyze a seeded track**
+1. Open `/tracks`. The slide-over lists 5 sample tracks (walk / hike / cycle / drive / boat) with
+   distance · time · stops. The map shows faint overview lines for all of them.
+2. Click **Ridge trail hike** (richest data). Expect: the map zooms to it, draws the path with
+   **amber stop markers**, and the sidebar shows metric cards (distance, moving time, avg/max speed,
+   ascent, stops), an **elevation profile**, a **speed profile**, and a **move/stop timeline**.
+3. **Playback:** press ▶ on the bottom bar. A marker animates along the path and **lingers at the
+   stops** (time-based playback); the chart cursors track it. Drag the scrubber to seek.
+
+**b. Build a route by clicking the map**  ← the part that's easy to miss
+1. Back to **All tracks** → **Build route**. A *"Click the map to add a point"* pill appears over
+   the map. Pick an **activity** (sets speed/cadence) and a name.
+2. **Click the map** several times → numbered waypoints + a dashed line appear; the counter rises.
+   **Undo** removes the last; **Clear** resets.
+3. Or add points precisely with the **search field**: type a city (e.g. *Kraków*) and pick from the
+   dropdown — the map flies there and drops the point — or type **`lat, lng`** (e.g. `50.45, 30.52`)
+   and choose "Use coordinates". (Many cities share a name — check the region in the suggestion.)
+4. **Save route** → it's turned into a full track and opens its analysis (ascent shows 0 m and the
+   elevation chart hides — a drawn route has no known terrain, by design).
+
+**c. Boat routes go by sea** (the around-land routing)
+1. Build a route, activity **Boat**. Add two points with land between them — e.g. coordinates
+   `38.6, -9.6` (Lisbon) then `41.3, 2.6` (Barcelona).
+2. **Save** → the saved path **rounds Iberia through the Strait of Gibraltar** (~1850 km) instead of
+   cutting across Spain. It follows the sea. (Other activities go straight as drawn.)
+3. *Limit:* the marine network is open-sea resolution — two points very close together inside one
+   harbour fall back to a straight hop.
+
+**d. Import a file**
+- **Build route** is for drawing; **Import track** takes a real **GPX or GeoJSON** file. Export a
+  GPX from Strava/Garmin/phone (or any `.geojson` LineString) → metrics + segments compute on import.
+
+**e. Density heatmap** — on the **All tracks** view, toggle **Heatmap** to see where tracks overlap
+(most visible zoomed into one region, since the samples are spread worldwide).
+
+**f. Explain this trip** *(needs Gemini quota)* — open a track → **Explain this trip**. A short
+briefing streams in, written **from the computed metrics** (it must not invent numbers). With no
+quota it shows a 429 — that's the only LLM-dependent part of Tracks.
+
+**API smoke (no browser):**
+```bash
+curl -s localhost:3000/api/tracks | jq '.tracks[].name'                 # list
+curl -s -X POST localhost:3000/api/tracks/build -H 'content-type: application/json' \
+  -d '{"name":"sea test","activity":"boat","waypoints":[[-9.6,38.6],[2.6,41.2]]}' \
+  | jq '.metrics.distanceM'                                              # ~1.57e6 m (sea), not ~1.08e6 (straight)
+```
+
+---
+
+## 8. Cross-cutting
+
+- **Onboarding:** on a first visit a 4-step spotlight tour auto-runs (welcome → modules → the shared
+  interactive map → status/settings). Replay it anytime with the **?** button in the top bar. To see
+  it again, clear the `locus:onboarding:v1` localStorage key (or use a private window).
 - **Theme:** top-bar sun/moon toggles light/dark; the basemap swaps positron/dark and the view is
   preserved. Default is dark.
 - **Language:** top-bar switcher (en/uk/pl); auto-detects from the browser; map place-name labels
-  follow the choice.
+  follow the choice. The Tracks builder, search, and tour are all localized.
 - **Mobile:** narrow the window — the module nav collapses to a sheet, slide-overs go full-width.
