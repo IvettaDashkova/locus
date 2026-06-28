@@ -1,5 +1,7 @@
 # Locus
 
+[![CI](https://github.com/IvettaDashkova/locus/actions/workflows/ci.yml/badge.svg)](https://github.com/IvettaDashkova/locus/actions/workflows/ci.yml)
+
 > A geospatial workspace to **capture, ask, act on, and analyze** location data.
 > One Next.js + **Postgres (PostGIS + pgvector)** app with four capabilities built as layered
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
@@ -94,6 +96,9 @@ Two complementary layers:
 | Ask | recall@k · faithfulness (LLM-as-judge) · geo_match · refusal_correct |
 | Act | task_success · tool_choice · step_efficiency · no_hallucinated_tools |
 | Tracks | metric formulas vs. hand-calculated worked examples |
+
+**CI:** GitHub Actions runs `typecheck → lint → test → build` on every push and PR to `main`
+(`.github/workflows/ci.yml`).
 
 ## API
 
