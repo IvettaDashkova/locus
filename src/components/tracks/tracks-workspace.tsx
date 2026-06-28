@@ -104,13 +104,14 @@ export function TracksWorkspace() {
   }, [loadTracks]);
 
   useEffect(() => {
-    setControlsCorner("bottom-right");
+    // Panel is on the right (like Capture) → keep map controls on the left.
+    setControlsCorner("bottom-left");
     return () => setControlsCorner("bottom-left");
   }, [setControlsCorner]);
 
   useEffect(() => {
     if (!map) return;
-    map.setPadding({ top: 0, bottom: 0, right: 0, left: open && isWide ? PANEL_WIDTH : 0 });
+    map.setPadding({ top: 0, bottom: 0, left: 0, right: open && isWide ? PANEL_WIDTH : 0 });
     return () => {
       try {
         map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
@@ -227,7 +228,7 @@ export function TracksWorkspace() {
       <RouteBuilderLayer active={building} waypoints={routeWaypoints} routedPath={routedPath} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
 
       {building ? (
-        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%+210px)]">
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%-210px)]">
           <span className="inline-flex items-center gap-2 rounded-full border bg-card/95 px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur">
             <MousePointerClick className="size-4 text-primary" />
             {t("tracks.build.mapHint", { n: String(routeWaypoints.length) })}
@@ -236,7 +237,7 @@ export function TracksWorkspace() {
       ) : null}
 
       {!open ? (
-        <div className="pointer-events-auto absolute left-4 top-4">
+        <div className="pointer-events-auto absolute right-4 top-4">
           <Button onClick={() => setOpen(true)} className="gap-2 shadow-lg">
             <Route className="size-4" />
             {t("nav.tracks")}
@@ -246,8 +247,8 @@ export function TracksWorkspace() {
 
       <aside
         className={cn(
-          "absolute left-0 top-0 h-full w-full border-r bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
-          open ? "translate-x-0 pointer-events-auto" : "-translate-x-full pointer-events-none",
+          "absolute right-0 top-0 h-full w-full border-l bg-card/95 shadow-xl backdrop-blur transition-transform duration-200 md:w-[420px]",
+          open ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none",
         )}
         aria-hidden={!open}
       >
@@ -448,7 +449,7 @@ export function TracksWorkspace() {
       </aside>
 
       {selected ? (
-        <div className="pointer-events-auto absolute bottom-6 left-1/2 z-10 flex w-[min(560px,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur md:left-[calc(50%+210px)]">
+        <div className="pointer-events-auto absolute bottom-6 left-1/2 z-10 flex w-[min(560px,calc(100%-2rem))] -translate-x-1/2 items-center gap-3 rounded-full border bg-card/95 px-4 py-2.5 shadow-xl backdrop-blur md:left-[calc(50%-210px)]">
           <Button onClick={playback.toggle} size="icon" className="size-9 shrink-0 rounded-full" aria-label={playback.playing ? "Pause" : "Play"}>
             {playback.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
           </Button>
