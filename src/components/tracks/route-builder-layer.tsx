@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
 import { useMapContext } from "@/components/map/map-context";
+import { removeMapLayers } from "@/components/map/map-cleanup";
 
 const ACCENT = "#6d4aff";
 const SRC = "locus-route-build";
@@ -50,7 +51,7 @@ export function RouteBuilderLayer({
   // One-time layer setup.
   useEffect(() => {
     if (!map) return;
-    return onStyleReady(map, () => {
+    const cleanupReady = onStyleReady(map, () => {
       if (map.getSource(SRC)) return;
       map.addSource(SRC, { type: "geojson", data: empty });
       map.addSource(PTS, { type: "geojson", data: empty });
@@ -75,6 +76,10 @@ export function RouteBuilderLayer({
         paint: { "text-color": "#fff" },
       });
     });
+    return () => {
+      cleanupReady();
+      removeMapLayers(map, [LINE, PTS, LABELS], [SRC, PTS]);
+    };
   }, [map]);
 
   // Click-to-add + crosshair cursor while active.

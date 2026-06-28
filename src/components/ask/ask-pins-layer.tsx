@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
 import { bbox } from "@turf/turf";
 import { useMapContext } from "@/components/map/map-context";
+import { removeMapLayers } from "@/components/map/map-cleanup";
 
 export type AskSource = {
   n: number;
@@ -87,6 +88,7 @@ export function AskPinsLayer({ sources }: { sources: AskSource[] }) {
       popup.remove();
       map.off("mousemove", move);
       map.off("mouseout", hide);
+      removeMapLayers(map, [POINTS], [SRC]);
     };
   }, [map]);
 

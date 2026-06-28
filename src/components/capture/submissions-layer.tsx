@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
 import { bbox } from "@turf/turf";
 import { useMapContext } from "@/components/map/map-context";
+import { removeMapLayers } from "@/components/map/map-cleanup";
 import type { SubmissionItem } from "./submissions-list";
 
 const SRC = "locus-submissions";
@@ -137,6 +138,7 @@ export function SubmissionsLayer({
       map.off("mousemove", onMove);
       map.off("mouseout", hidePopup);
       map.off("click", onClick);
+      removeMapLayers(map, [POINTS, POLY_LINE, POLY_FILL], [SRC]);
     };
   }, [map]);
 

@@ -63,7 +63,7 @@ export function TracksWorkspace() {
   const [selected, setSelected] = useState<TrackDetail | null>(null);
   const [heatmap, setHeatmap] = useState<GeoJSON.FeatureCollection | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

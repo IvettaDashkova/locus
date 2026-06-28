@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
 import { bbox } from "@turf/turf";
 import { useMapContext } from "@/components/map/map-context";
+import { removeMapLayers } from "@/components/map/map-cleanup";
 
 const SRC = "locus-act";
 const POINTS = `${SRC}-points`;
@@ -69,6 +70,7 @@ export function ActResultsLayer({ features }: { features: GeoJSON.Feature[] }) {
       popup.remove();
       map.off("mousemove", move);
       map.off("mouseout", hide);
+      removeMapLayers(map, [POINTS, LINES, OUTLINE, FILL], [SRC]);
     };
   }, [map]);
 

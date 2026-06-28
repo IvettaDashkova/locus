@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import { useMapContext } from "@/components/map/map-context";
+import { removeMapLayers } from "@/components/map/map-cleanup";
 import type { TrackSummary, TrackDetail } from "@/lib/tracks/queries";
 
 const ACCENT = "#6d4aff";
@@ -116,7 +117,11 @@ export function TracksLayer({
         },
       });
     };
-    return onStyleReady(map, setup);
+    const cleanupReady = onStyleReady(map, setup);
+    return () => {
+      cleanupReady();
+      removeMapLayers(map, [HEAT, OVERVIEW, PATH, STOPS, HEAD], [OVERVIEW, HEAT, PATH, STOPS, HEAD]);
+    };
   }, [map]);
 
   // Overview lines for all tracks.

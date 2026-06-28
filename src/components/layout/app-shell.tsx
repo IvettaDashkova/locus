@@ -9,11 +9,12 @@ import { ModuleNav } from "./module-nav";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UsageBadge } from "@/components/usage/usage-badge";
+import { UserMenu } from "@/components/auth/user-menu";
 import { OnboardingTour, START_TOUR_EVENT } from "@/components/onboarding/onboarding-tour";
 import { useI18n } from "@/lib/i18n/provider";
 
 /** Top bar + left module nav (collapses to a sheet on mobile) + main content region. */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, userName }: { children: React.ReactNode; userName?: string | null }) {
   const { t } = useI18n();
   const [navOpen, setNavOpen] = useState(false);
 
@@ -55,6 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
           <ThemeToggle />
           <LanguageSwitcher />
+          {userName ? <UserMenu name={userName} /> : null}
         </div>
       </header>
       <div className="flex min-h-0 flex-1">
