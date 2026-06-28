@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Menu, HelpCircle } from "lucide-react";
+import { MapPin, Menu, HelpCircle, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ModuleNav } from "./module-nav";
@@ -56,7 +56,14 @@ export function AppShell({ children, userName }: { children: React.ReactNode; us
           </Button>
           <ThemeToggle />
           <LanguageSwitcher />
-          {userName ? <UserMenu name={userName} /> : null}
+          {userName ? (
+            <UserMenu name={userName} />
+          ) : (
+            <Button render={<Link href="/login" />} variant="outline" size="sm" className="gap-1.5">
+              <LogIn className="size-4" />
+              {t("auth.signin")}
+            </Button>
+          )}
         </div>
       </header>
       <div className="flex min-h-0 flex-1">

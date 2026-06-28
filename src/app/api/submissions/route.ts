@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Ajv2020 from "ajv/dist/2020";
 import { getClient } from "@/db/client";
+import { requireAuth } from "@/lib/auth/guard";
 import { siteLocationField, type GeneratedSchema } from "@/lib/capture/schema-spec";
 
 export const runtime = "nodejs";
@@ -70,6 +71,9 @@ function pickSiteName(data: Record<string, unknown>, fallback: string): string {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: {
     name?: string;
     jsonSchema?: GeneratedSchema;
@@ -111,7 +115,7 @@ export async function POST(req: Request) {
     const result = await sql.begin(async (tx) => {
       const [form] = await tx<{ id: string }[]>`
         INSERT INTO forms (name, json_schema, ui_schema)
-        VALUES (${formName}, ${tx.json(jsonSchema as never)}, ${tx.json((uiSchema ?? {}) as never)})
+        VALUES (${formName}, ${JSON.stringify(jsonSchema)}::jsonb, ${JSON.stringify(uiSchema ?? {})}::jsonb)
         RETURNING id
       `;
 
@@ -134,7 +138,7 @@ export async function POST(req: Request) {
         : tx`NULL`;
       const [submission] = await tx<{ id: string }[]>`
         INSERT INTO submissions (form_id, site_id, data, geom)
-        VALUES (${form.id}, ${siteId}, ${tx.json(data as never)}, ${geom})
+        VALUES (${form.id}, ${siteId}, ${JSON.stringify(data)}::jsonb, ${geom})
         RETURNING id
       `;
 

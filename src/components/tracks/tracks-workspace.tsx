@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { useMapContext } from "@/components/map/map-context";
+import { useAuth } from "@/components/auth/auth-context";
+import { SignInHint } from "@/components/auth/sign-in-hint";
 import type { TrackSummary, TrackDetail } from "@/lib/tracks/queries";
 import { fmtKm, fmtKmh, fmtM, fmtDuration } from "@/lib/tracks/format";
 import { ACTIVITIES, type Activity } from "@/lib/tracks/presets";
@@ -56,6 +58,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 export function TracksWorkspace() {
   const { t } = useI18n();
   const { map, setControlsCorner } = useMapContext();
+  const { isLoggedIn } = useAuth();
   const isWide = useMediaQuery("(min-width: 768px)");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -118,6 +121,7 @@ export function TracksWorkspace() {
   }, [map, isWide, open]);
 
   async function onFile(file: File) {
+    if (!isLoggedIn) return; // SignInHint is shown; importing requires an account
     setImporting(true);
     setError(null);
     try {
@@ -187,6 +191,7 @@ export function TracksWorkspace() {
   }
   async function saveRoute() {
     if (routeWaypoints.length < 2 || savingRoute) return;
+    if (!isLoggedIn) return; // SignInHint is shown; saving requires an account
     setSavingRoute(true);
     setError(null);
     try {
@@ -332,6 +337,7 @@ export function TracksWorkspace() {
                 </div>
 
                 {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
+                {!isLoggedIn ? <SignInHint callbackUrl="/tracks" /> : null}
 
                 <div className="flex items-center gap-2">
                   <Button onClick={saveRoute} disabled={routeWaypoints.length < 2 || savingRoute} size="sm" className="gap-2">
@@ -376,6 +382,7 @@ export function TracksWorkspace() {
                     }}
                   />
                 </div>
+                {!isLoggedIn ? <SignInHint callbackUrl="/tracks" /> : null}
                 {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
 
                 <div className="flex flex-col gap-2 pt-1">

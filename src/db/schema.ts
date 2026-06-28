@@ -2,6 +2,22 @@ import { pgTable, uuid, text, jsonb, timestamp, integer, doublePrecision, index 
 import { geometry, geographyPoint, lineString, geometryAny, vector } from "./types";
 
 /**
+ * `users` — accounts for the email/password sign-in (Auth.js Credentials). Only the identity and a
+ * salted password hash are stored; the rest of the app's data is shared, not per-user — this table
+ * exists purely so "saving requires an authorized user". OAuth users sign in without a row here.
+ */
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+/**
  * `sites` — the anchor table for the whole app. Capture submissions, Ask chunks, and Tracks all
  * relate (FK or spatially) back to a site. Every site pins to a single Point; if a site ever needs
  * an extent, add a nullable `area geometry(Polygon,4326)` column later (additive migration).

@@ -3,14 +3,13 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 
 /**
- * Edge-safe Auth.js config shared by the proxy gate and the full server instance.
+ * Edge-safe Auth.js base config. Only OAuth providers live here (no Node-only deps); the
+ * Credentials provider — which hits the DB and `node:crypto` — is added in `auth.ts`.
  *
- * Only OAuth providers live here — they have no Node-only dependencies, so this file can run in the
- * proxy. The Credentials provider (which needs `node:crypto`) is added in `auth.ts`, which runs in
- * the Node route handler only. See https://authjs.dev/getting-started/migrating-to-v5#edge-compatibility.
+ * The app itself is public; signing in is only required to *save* data (enforced in the write API
+ * routes), so there is no `authorized`/proxy gate.
  *
- * OAuth providers are opt-in: each is enabled only when its env vars are set, so the app works
- * out-of-the-box with the demo password and gains "Sign in with GitHub/Google" once configured.
+ * OAuth providers are opt-in: each is enabled only when its env vars are set.
  */
 const oauthProviders: NextAuthConfig["providers"] = [];
 if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) {
@@ -28,16 +27,4 @@ export const authConfig = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: oauthProviders,
-  callbacks: {
-    /**
-     * Runs in the proxy on every matched request. Returning false sends the user to `/login`;
-     * the login page itself stays public. This is the single gate for the whole app.
-     */
-    authorized({ auth, request }) {
-      const isLoggedIn = Boolean(auth?.user);
-      const { pathname } = request.nextUrl;
-      if (pathname === "/login") return true;
-      return isLoggedIn;
-    },
-  },
 } satisfies NextAuthConfig;

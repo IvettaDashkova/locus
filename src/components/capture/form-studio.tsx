@@ -4,6 +4,8 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/provider";
+import { useAuth } from "@/components/auth/auth-context";
+import { SignInHint } from "@/components/auth/sign-in-hint";
 
 // Client-only: pulls in maplibre-gl + terra-draw, which touch `window`.
 const FormRenderer = dynamic(() => import("./form-renderer").then((m) => m.FormRenderer), {
@@ -16,6 +18,7 @@ export type SaveResult = { submissionId: string; siteId: string | null; siteName
 
 export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
   const { t } = useI18n();
+  const { isLoggedIn } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
 
   async function save(data: unknown) {
     if (!generated) return;
+    if (!isLoggedIn) return; // SignInHint is shown; saving requires an account
     setSubmitting(true);
     setSaveError(null);
     try {
@@ -148,6 +152,11 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
       <div className="min-h-0 overflow-auto p-4">
         {generated && !inspectorError ? (
           <>
+            {!isLoggedIn ? (
+              <div className="mb-3">
+                <SignInHint callbackUrl="/capture" />
+              </div>
+            ) : null}
             <FormRenderer
               schema={generated.jsonSchema}
               uiSchema={generated.uiSchema}

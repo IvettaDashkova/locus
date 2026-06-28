@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClient } from "@/db/client";
+import { requireAuth } from "@/lib/auth/guard";
 import { listTracks } from "@/lib/tracks/queries";
 import { parseTrack } from "@/lib/tracks/parse";
 import { insertTrack } from "@/lib/tracks/store";
@@ -21,6 +22,9 @@ export async function GET() {
  * metrics + segments are computed, and everything is persisted. Returns the new track's summary.
  */
 export async function POST(req: Request) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: { content?: unknown; filename?: unknown; name?: unknown };
   try {
     body = await req.json();

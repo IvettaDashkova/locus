@@ -36,6 +36,13 @@
       "when": 1782508635052,
       "tag": "0004_minor_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782670957738,
+      "tag": "0005_clever_wong",
+      "breakpoints": true
     }
   ]
 }

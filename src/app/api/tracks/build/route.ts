@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClient } from "@/db/client";
+import { requireAuth } from "@/lib/auth/guard";
 import { synthesizeTrack } from "@/lib/tracks/synthesize";
 import { routeToSynthConfig, isActivity } from "@/lib/tracks/presets";
 import { seaRoute } from "@/lib/tracks/sea-route";
@@ -17,6 +18,9 @@ const isWaypoint = (v: unknown): v is [number, number] =>
  * metrics + persistence path as imported tracks. Returns the new track's summary.
  */
 export async function POST(req: Request) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: { name?: unknown; activity?: unknown; waypoints?: unknown };
   try {
     body = await req.json();
