@@ -1,11 +1,11 @@
-fkttt# Locus
+# Locus
 
 > A geospatial workspace to **capture, ask, act on, and analyze** location data.
 > One Next.js + **Postgres (PostGIS + pgvector)** app with four capabilities built as layered
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
 > and trajectory analytics.
 
-**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts
+**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
 
 > **100% free stack** — no paid services. The LLM provider is a one-line swap via the AI SDK, so a
 > paid model (e.g. Claude) can drop in later without rearchitecting. Full mapping in
@@ -89,6 +89,30 @@ A shared eval harness (`/evals`) covers each module:
 | Ask | recall@k · faithfulness (LLM-as-judge) · geo_match · refusal_correct |
 | Act | task_success · tool_choice · step_efficiency · no_hallucinated_tools |
 | Tracks | metric formulas vs. hand-calculated worked examples |
+
+## API
+
+Every module is backed by a small HTTP API documented with **OpenAPI 3.0** and browsable with
+**Swagger UI**:
+
+- **Swagger UI:** [`/api/docs`](https://locus-dun.vercel.app/api/docs) — try endpoints in the browser.
+- **OpenAPI spec:** [`/api/openapi`](https://locus-dun.vercel.app/api/openapi) (JSON).
+
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| `/api/health` | GET | DB + PostGIS/pgvector health |
+| `/api/usage` | GET | Gemini free-tier quota left today |
+| `/api/generate` | POST | Capture: prompt → form schema |
+| `/api/submissions` | GET · POST | List / save Capture submissions |
+| `/api/ask` | POST | Ask: grounded RAG answer (streaming) |
+| `/api/act` | POST | Act: agent task (NDJSON stream) |
+| `/api/geocode` | GET | Place typeahead (Photon/OSM) |
+| `/api/tracks` | GET · POST | List tracks / import GPX·GeoJSON |
+| `/api/tracks/{id}` | GET | Track fixes + segments |
+| `/api/tracks/{id}/explain` | POST | Grounded trip briefing (streaming) |
+| `/api/tracks/heatmap` | GET | Density-heatmap points (GeoJSON) |
+| `/api/tracks/build` | POST | Build a track from a drawn route (boats routed by sea) |
+| `/api/tracks/route-preview` | POST | Preview a route's geometry for an activity |
 
 ## Running locally
 
