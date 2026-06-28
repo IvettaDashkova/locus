@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Route, Upload, X, Play, Pause, ChevronLeft, Footprints, Mountain, Bike, Car, Sailboat,
-  Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2,
+  Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2, MousePointerClick,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,7 @@ import { ACTIVITIES, type Activity } from "@/lib/tracks/presets";
 import { useTrackPlayback } from "@/lib/tracks/use-playback";
 import { TracksLayer } from "./tracks-layer";
 import { RouteBuilderLayer } from "./route-builder-layer";
+import { PlaceSearch } from "./place-search";
 import { TrackCharts } from "./track-charts";
 import { TrackExplain } from "./track-explain";
 
@@ -135,6 +136,11 @@ export function TracksWorkspace() {
     }
   }
 
+  const addWaypoint = useCallback((lng: number, lat: number, fly = false) => {
+    setRouteWaypoints((w) => [...w, [lng, lat]]);
+    if (fly && map) map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 12), duration: 700 });
+  }, [map]);
+
   function startBuild() {
     setSelected(null);
     setError(null);
@@ -181,11 +187,16 @@ export function TracksWorkspace() {
         showHeatmap={showHeatmap}
         playhead={selected ? playback.position : null}
       />
-      <RouteBuilderLayer
-        active={building}
-        waypoints={routeWaypoints}
-        onAdd={(lng, lat) => setRouteWaypoints((w) => [...w, [lng, lat]])}
-      />
+      <RouteBuilderLayer active={building} waypoints={routeWaypoints} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
+
+      {building ? (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%+210px)]">
+          <span className="inline-flex items-center gap-2 rounded-full border bg-card/95 px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur">
+            <MousePointerClick className="size-4 text-primary" />
+            {t("tracks.build.mapHint", { n: String(routeWaypoints.length) })}
+          </span>
+        </div>
+      ) : null}
 
       {!open ? (
         <div className="pointer-events-auto absolute left-4 top-4">
@@ -257,6 +268,11 @@ export function TracksWorkspace() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.build.add")}</label>
+                  <PlaceSearch onPick={(lng, lat) => addWaypoint(lng, lat, true)} />
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border bg-background/60 px-3 py-2 text-sm">
