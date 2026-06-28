@@ -72,7 +72,9 @@ export function TracksWorkspace() {
   const [routeName, setRouteName] = useState("");
   const [routeActivity, setRouteActivity] = useState<Activity>("walk");
   const [routeWaypoints, setRouteWaypoints] = useState<[number, number][]>([]);
+  const [routedPath, setRoutedPath] = useState<[number, number][] | null>(null);
   const [savingRoute, setSavingRoute] = useState(false);
+  const previewSeq = useRef(0);
 
   const playback = useTrackPlayback(selected?.points ?? []);
 
@@ -136,6 +138,35 @@ export function TracksWorkspace() {
     }
   }
 
+  // Rebuild the previewed route whenever the waypoints OR the activity change — boats follow the sea,
+  // so switching to/from Boat re-routes the drawn line. Debounced; non-boat is a straight line (no call).
+  useEffect(() => {
+    if (!building) return;
+    const mine = ++previewSeq.current;
+    const id = setTimeout(async () => {
+      if (routeWaypoints.length < 2) {
+        setRoutedPath(null);
+        return;
+      }
+      if (routeActivity !== "boat") {
+        setRoutedPath(routeWaypoints);
+        return;
+      }
+      try {
+        const res = await fetch("/api/tracks/route-preview", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ activity: routeActivity, waypoints: routeWaypoints }),
+        });
+        const json = await res.json();
+        if (mine === previewSeq.current) setRoutedPath(json.path ?? routeWaypoints);
+      } catch {
+        if (mine === previewSeq.current) setRoutedPath(routeWaypoints);
+      }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [building, routeWaypoints, routeActivity]);
+
   const addWaypoint = useCallback((lng: number, lat: number, fly = false) => {
     setRouteWaypoints((w) => [...w, [lng, lat]]);
     if (fly && map) map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 12), duration: 700 });
@@ -152,6 +183,7 @@ export function TracksWorkspace() {
   function cancelBuild() {
     setBuilding(false);
     setRouteWaypoints([]);
+    setRoutedPath(null);
   }
   async function saveRoute() {
     if (routeWaypoints.length < 2 || savingRoute) return;
@@ -187,7 +219,7 @@ export function TracksWorkspace() {
         showHeatmap={showHeatmap}
         playhead={selected ? playback.position : null}
       />
-      <RouteBuilderLayer active={building} waypoints={routeWaypoints} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
+      <RouteBuilderLayer active={building} waypoints={routeWaypoints} routedPath={routedPath} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
 
       {building ? (
         <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 md:left-[calc(50%+210px)]">

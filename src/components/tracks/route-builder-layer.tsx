@@ -32,10 +32,13 @@ const setData = (map: MapLibreMap, id: string, data: GeoJSON.GeoJSON) =>
 export function RouteBuilderLayer({
   active,
   waypoints,
+  routedPath,
   onAdd,
 }: {
   active: boolean;
   waypoints: [number, number][];
+  /** The actual path the route follows (e.g. sea-routed for boats); falls back to straight waypoints. */
+  routedPath: [number, number][] | null;
   onAdd: (lng: number, lat: number) => void;
 }) {
   const { map } = useMapContext();
@@ -93,7 +96,8 @@ export function RouteBuilderLayer({
     };
   }, [map, active]);
 
-  // Render the current route.
+  // Render the current route: the line follows `routedPath` (sea route for boats) when available,
+  // else the straight waypoints; the numbered vertices are always the user's clicked waypoints.
   useEffect(() => {
     if (!map) return;
     return onStyleReady(map, () => {
@@ -102,16 +106,17 @@ export function RouteBuilderLayer({
         setData(map, PTS, empty);
         return;
       }
+      const line = routedPath && routedPath.length >= 2 ? routedPath : waypoints;
       setData(map, SRC, {
         type: "FeatureCollection",
-        features: waypoints.length >= 2 ? [{ type: "Feature", geometry: { type: "LineString", coordinates: waypoints }, properties: {} }] : [],
+        features: line.length >= 2 ? [{ type: "Feature", geometry: { type: "LineString", coordinates: line }, properties: {} }] : [],
       });
       setData(map, PTS, {
         type: "FeatureCollection",
         features: waypoints.map((c, i) => ({ type: "Feature", geometry: { type: "Point", coordinates: c }, properties: { n: String(i + 1) } })),
       });
     });
-  }, [map, active, waypoints]);
+  }, [map, active, waypoints, routedPath]);
 
   return null;
 }
