@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Load searoute-js (and its geojson-path-finder / priority-queue deps) via native Node require at
+  // runtime instead of bundling it — the bundler mangles the queue dependency's CJS interop
+  // ("Queue is not a constructor"). It only runs in the /api/tracks/build Node route.
+  serverExternalPackages: ["searoute-js"],
 };
 
 export default nextConfig;

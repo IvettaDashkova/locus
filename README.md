@@ -1,4 +1,4 @@
-# Locus
+fkttt# Locus
 
 > A geospatial workspace to **capture, ask, act on, and analyze** location data.
 > One Next.js + **Postgres (PostGIS + pgvector)** app with four capabilities built as layered

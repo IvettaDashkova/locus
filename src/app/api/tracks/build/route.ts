@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getClient } from "@/db/client";
 import { synthesizeTrack } from "@/lib/tracks/synthesize";
 import { routeToSynthConfig, isActivity } from "@/lib/tracks/presets";
+import { seaRoute } from "@/lib/tracks/sea-route";
 import { insertTrack } from "@/lib/tracks/store";
 
 export const runtime = "nodejs";
@@ -37,7 +38,11 @@ export async function POST(req: Request) {
       : `${activity[0].toUpperCase()}${activity.slice(1)} route`;
 
   try {
-    const cfg = routeToSynthConfig(name, activity, waypoints as [number, number][], new Date());
+    // Boats/ships must travel by sea: snap the drawn waypoints onto the global marine network and
+    // route the shortest in-water path around land between them. Other activities go as-drawn.
+    const drawn = waypoints as [number, number][];
+    const pathWaypoints = activity === "boat" ? seaRoute(drawn) : drawn;
+    const cfg = routeToSynthConfig(name, activity, pathWaypoints, new Date());
     const { points, source } = synthesizeTrack(cfg);
     const stored = await insertTrack(getClient(), { name, activity, source, points });
     return NextResponse.json({ id: stored.id, name, metrics: stored.metrics });
