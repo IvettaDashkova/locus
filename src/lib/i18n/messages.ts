@@ -111,7 +111,6 @@ const en: Dict = {
   "act.example1": "Drive time from Kyiv to Lviv.",
   "act.example2": "What's the weather and elevation in Lviv?",
 
-  "tracks.intro": "Import a GPS track (GPX/GeoJSON) or pick a sample. Metrics, segments, and stops are computed in PostGIS; play the trip back and get an AI briefing.",
   "tracks.import": "Import track",
   "tracks.importing": "Importing…",
   "tracks.heatmap": "Heatmap",
@@ -275,7 +274,6 @@ const uk: Dict = {
   "act.example1": "Час у дорозі з Києва до Львова.",
   "act.example2": "Яка погода й висота у Львові?",
 
-  "tracks.intro": "Імпортуйте GPS-трек (GPX/GeoJSON) або оберіть приклад. Метрики, сегменти та зупинки рахуються в PostGIS; відтворіть поїздку й отримайте AI-бриф.",
   "tracks.import": "Імпорт треку",
   "tracks.importing": "Імпорт…",
   "tracks.heatmap": "Теплокарта",
@@ -439,7 +437,6 @@ const pl: Dict = {
   "act.example1": "Czas dojazdu z Kijowa do Lwowa.",
   "act.example2": "Jaka jest pogoda i wysokość we Lwowie?",
 
-  "tracks.intro": "Zaimportuj ślad GPS (GPX/GeoJSON) lub wybierz przykład. Metryki, segmenty i postoje liczone są w PostGIS; odtwórz trasę i otrzymaj briefing AI.",
   "tracks.import": "Importuj ślad",
   "tracks.importing": "Importowanie…",
   "tracks.heatmap": "Mapa cieplna",
