@@ -13,8 +13,8 @@ What makes this go fast:
 Positioning: this is a universal geospatial product on purpose. Your maritime depth stays in your
 work history; Locus broadens you into general geospatial so you match a far wider set of roles.
 
-**Stack is 100% free** — Gemini free tier (or local Ollama) via the AI SDK, local embeddings,
-Supabase/Neon Postgres, Vercel Hobby, MapLibre + OpenFreeMap, OSM/Open-Meteo tools, Langfuse free.
+**Stack is 100% free** — Gemini free tier (or local Ollama) via the AI SDK, Gemini embeddings
+(free tier, via the AI SDK), Supabase/Neon Postgres, Vercel Hobby, MapLibre + OpenFreeMap, OSM/Open-Meteo tools, Langfuse free.
 Full mapping, limits and signups in `FREE_STACK.md`. Read it before Phase 0.
 
 Time: Phase 0 ~2–3 days · P1 ~3–5 days · P2 ~1–2 weeks · P3 ~1.5–2 weeks · P4 ~2–3 weeks.
@@ -36,7 +36,7 @@ Postgres (PostGIS + pgvector) database. Phase 0 is the shared foundation only. P
 - design system (Tailwind + shadcn/ui), app layout with a left module nav (Capture/Ask/Act/Tracks)
 - a shared /evals skeleton (runner + results writer) the modules will plug into
 - .env.example with GEMINI_API_KEY (or local Ollama), DATABASE_URL (Supabase/Neon free), ORS_API_KEY, LANGFUSE_* — all free
-- LLM provider config via the Vercel AI SDK (Gemini free tier hosted / Ollama local), and local in-process embeddings (Transformers.js) so nothing hits a paid API. See FREE_STACK.md.
+- LLM provider config via the Vercel AI SDK (Gemini free tier hosted / Ollama local), and embeddings via the AI SDK (Gemini `gemini-embedding-001`, 768-d, free tier — local ONNX fails on serverless) so nothing hits a paid API. See FREE_STACK.md.
 No feature logic yet. List open questions.
 ```
 
@@ -105,17 +105,16 @@ content committed. No code yet.
 **Prompt 2.2 — Schema + ingestion**
 ```
 Add the chunks migration (pgvector + tsvector + PostGIS geom + embedding_model). Build
-scripts/ingest: read CC-licensed open geo data + captured sites, chunk by entry, embed **locally**
-(Transformers.js — `bge-small-en` / `all-MiniLM`, no API), insert
+scripts/ingest: read CC-licensed open geo data + captured sites, chunk by entry, embed via the
+**AI SDK** (Gemini `gemini-embedding-001`, 768-d, free tier — serverless-safe), insert
 with tsvector populated and geom where available. Ship a tiny /data/sample. `npm run ingest`.
 ```
 
 **Prompt 2.3 — Hybrid + spatial retrieval**
 ```
-Implement retrieval: pgvector cosine + HNSW, tsvector/BM25, reciprocal-rank fusion, and an
-optional local cross-encoder rerank (`bge-reranker-base` via Transformers.js — ship fusion-only
-first if it's heavy, add rerank later), plus an optional PostGIS spatial filter. Return top-k with
-source + entry_id + coords. CLI to eyeball results.
+Implement retrieval: pgvector cosine + HNSW, tsvector/BM25, reciprocal-rank fusion (shipped
+fusion-only — no reranker model, which is the serverless-heavy part), plus an optional PostGIS
+spatial filter. Return top-k with source + entry_id + coords. CLI to eyeball results.
 ```
 
 **Prompt 2.4 — Chat + citations + map**

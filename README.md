@@ -7,7 +7,7 @@
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
 > and trajectory analytics.
 
-**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini free) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
+**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini `gemini-embedding-001`, 768-d) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
 
 > **100% free stack** — no paid services. The LLM provider is a one-line swap via the AI SDK, so a
 > paid model (e.g. Claude) can drop in later without rearchitecting. Full mapping in
@@ -77,8 +77,9 @@ four toy repos.
   Claude Desktop or any MCP client.
 - **Open, no-key data and a free stack by default.** OSM (Nominatim/Overpass), OpenRouteService
   (free key), Open-Meteo, SunCalc, CC-licensed corpora; MapLibre on OpenFreeMap tiles (no key, no signup);
-  Gemini free tier or local Ollama for the LLM with local in-process embeddings. The whole demo
-  runs for anyone at zero cost — see [`FREE_STACK.md`](./FREE_STACK.md).
+  Gemini free tier (or local Ollama) for the LLM, and embeddings via the AI SDK (Gemini
+  `gemini-embedding-001`, 768-d, free tier — chosen over local ONNX, which fails to load on
+  serverless). The whole demo runs for anyone at zero cost — see [`FREE_STACK.md`](./FREE_STACK.md).
 - **Evals are a first-class, cross-cutting concern**, not a per-feature afterthought (see below).
 
 ## Tests & evals

@@ -9,8 +9,8 @@ in a paid model later if you ever get credits, without rearchitecting).
 | Need | Free default | Why | Alternatives (also free) |
 | --- | --- | --- | --- |
 | **LLM** (forms, RAG answers, agent, "explain") | **Google Gemini** free tier (Flash) for the hosted demo · **Ollama** (Llama 3.x / Qwen) for local dev | Gemini's free tier is generous and works through the AI SDK; Ollama is fully local | Groq free tier (fast), OpenRouter free models, Cloudflare Workers AI |
-| **Embeddings** | **Local / in-process** via Transformers.js (`bge-small-en` or `all-MiniLM-L6-v2`) | No key, no rate limit, no cost; embed at ingestion time | Gemini embeddings free tier |
-| **Reranker** | **Local** small cross-encoder (`bge-reranker-base`) — or skip at first | Keeps retrieval quality without an API | Start with fusion only, add rerank later |
+| **Embeddings** | **Gemini `gemini-embedding-001`** (768-d) via the AI SDK, free tier | Works reliably on serverless (local ONNX/Transformers.js fails to load there); uses the same `GEMINI_API_KEY` | local Transformers.js (`bge-small`/`all-MiniLM`) for non-serverless hosts |
+| **Reranker** | **Fusion-only** (Reciprocal Rank Fusion) — no model | Keeps retrieval quality with no extra API/model | add a local cross-encoder (`bge-reranker-base`) on a non-serverless host |
 | **Database** (PostGIS + pgvector + tsvector) | **Supabase** free tier | Postgres with PostGIS *and* pgvector enabled out of the box, free | Neon free tier (also supports both) |
 | **App hosting** | **Vercel** Hobby (free) | First-class Next.js, free streaming | Cloudflare Pages, Netlify, Render free |
 | **Map library** | **MapLibre GL** (open source) | No token, no vendor lock-in | — |
@@ -27,9 +27,10 @@ in a paid model later if you ever get credits, without rearchitecting).
 
 ## Gotchas worth knowing (these are the real constraints)
 
-- **Embed offline, not in the request path.** Ingestion embeds documents locally once, so the only
-  query-time embedding is the user's question — small and cheap. Keeps you off paid embedding APIs
-  and within serverless limits.
+- **Embed at ingestion, not in the request path.** Documents are embedded once during `npm run
+  ingest`, so the only query-time embedding is the user's question — small and cheap. Embeddings go
+  through the AI SDK (Gemini, free tier): local ONNX models fail to load on serverless, so the
+  hosted demo uses the hosted embedder; the model is one swappable config constant.
 - **Reranker is the heaviest thing to run serverless.** Options, cheapest first: ship without
   rerank (fusion only) and add it once retrieval needs it; run a small reranker model; or move
   rerank to a tiny separate worker. Don't block Phase 2 on it.

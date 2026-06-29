@@ -5,8 +5,8 @@ import { embedPassages } from "@/lib/ai/embeddings";
 import { EMBEDDING } from "@/lib/ai/embeddings.config";
 
 /**
- * Ingest the sample corpus + captured data into `chunks`: chunk → embed locally (passages) → store
- * with geom. Idempotent per source. Run: `npm run ingest`.
+ * Ingest the sample corpus + captured data into `chunks`: chunk → embed via the AI SDK (Gemini,
+ * 768-d) → store with geom. Idempotent per source. Run: `npm run ingest`.
  */
 
 type Doc = {

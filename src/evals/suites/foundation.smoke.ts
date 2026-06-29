@@ -4,8 +4,8 @@ import { EMBEDDING } from "@/lib/ai/embeddings.config";
 
 /**
  * Phase-0 smoke suite. Proves the foundation end to end without any feature logic:
- * DB + extensions reachable, embedding lock intact, LLM provider constructs, local embeddings run.
- * The embeddings case is offline-tolerant so `npm run eval` stays green before the model is cached.
+ * DB + extensions reachable, embedding lock intact, LLM provider constructs, embeddings run.
+ * The embeddings case is offline-tolerant (AI SDK / Gemini) so `npm run eval` stays green on quota.
  */
 export const foundationSmoke: Suite = {
   module: "foundation",
