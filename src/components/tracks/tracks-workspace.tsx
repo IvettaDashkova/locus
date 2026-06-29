@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Route, Upload, X, Play, Pause, Footprints, Mountain, Bike, Car, Sailboat,
   Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2, MousePointerClick,
-  PanelRightOpen,
+  PanelRightOpen, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +83,14 @@ export function TracksWorkspace() {
   const [savingRoute, setSavingRoute] = useState(false);
   const previewSeq = useRef(0);
 
+  // Edit/delete state for the selected (owned) track.
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editActivity, setEditActivity] = useState<Activity | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // The left panel (builder or selected-track detail) is open whenever one of those is active.
   const formOpen = building || Boolean(selected);
 
@@ -101,6 +109,7 @@ export function TracksWorkspace() {
   // Open a track from the list: leave the builder, load detail, close the mobile sheet.
   const openTrack = useCallback((id: string) => {
     setBuilding(false);
+    setEditing(false);
     setListOpen(false);
     selectTrack(id);
   }, [selectTrack]);
@@ -198,6 +207,7 @@ export function TracksWorkspace() {
 
   function startBuild() {
     setSelected(null);
+    setEditing(false);
     setError(null);
     setRouteName("");
     setRouteActivity("walk");
@@ -230,6 +240,57 @@ export function TracksWorkspace() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSavingRoute(false);
+    }
+  }
+
+  function startEdit() {
+    if (!selected) return;
+    setEditName(selected.track.name);
+    setEditActivity((selected.track.activity as Activity) ?? null);
+    setEditDescription(selected.track.description ?? "");
+    setError(null);
+    setEditing(true);
+  }
+  async function saveEdit() {
+    if (!selected || savingEdit || !editName.trim()) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/tracks/${selected.track.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: editName.trim(), activity: editActivity, description: editDescription.trim() || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Update failed");
+      setEditing(false);
+      await loadTracks();
+      await selectTrack(selected.track.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+  async function deleteTrack() {
+    if (!selected || deleting) return;
+    if (!window.confirm(t("tracks.deleteConfirm"))) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/tracks/${selected.track.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? "Delete failed");
+      }
+      playback.pause();
+      setEditing(false);
+      setSelected(null);
+      await loadTracks();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -353,6 +414,7 @@ export function TracksWorkspace() {
               variant="ghost"
               size="icon-sm"
               onClick={() => {
+                setEditing(false);
                 if (building) cancelBuild();
                 else {
                   setSelected(null);
@@ -442,15 +504,84 @@ export function TracksWorkspace() {
                   </Button>
                 </div>
               </div>
+            ) : selected && editing ? (
+              <div className="space-y-4 p-4">
+                <h3 className="text-base font-semibold">{t("tracks.editTitle")}</h3>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.build.name")}</label>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.build.activity")}</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {ACTIVITIES.map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setEditActivity(a)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors",
+                          editActivity === a ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
+                        )}
+                      >
+                        <ActivityIcon activity={a} className="size-3.5" />
+                        {t(`tracks.activity.${a}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{t("tracks.descriptionLabel")}</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  />
+                </div>
+
+                {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
+
+                <div className="flex items-center gap-2">
+                  <Button onClick={saveEdit} disabled={!editName.trim() || savingEdit} size="sm" className="gap-2">
+                    <Check className="size-4" />
+                    {savingEdit ? t("tracks.build.saving") : t("tracks.build.save")}
+                  </Button>
+                  <Button onClick={() => setEditing(false)} variant="outline" size="sm">
+                    {t("tracks.build.cancel")}
+                  </Button>
+                </div>
+              </div>
             ) : selected ? (
               <div className="space-y-4 p-4">
-                <div className="flex items-center gap-2">
-                  <ActivityIcon activity={selected.track.activity} className="size-5 text-primary" />
-                  <h3 className="text-base font-semibold">{selected.track.name}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ActivityIcon activity={selected.track.activity} className="size-5 shrink-0 text-primary" />
+                    <h3 className="truncate text-base font-semibold">{selected.track.name}</h3>
+                  </div>
+                  {selected.track.canEdit ? (
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button variant="ghost" size="icon-sm" onClick={startEdit} aria-label={t("tracks.edit")} title={t("tracks.edit")}>
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon-sm" onClick={deleteTrack} disabled={deleting} aria-label={t("tracks.delete")} title={t("tracks.delete")}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
                 {selected.track.description ? (
                   <p className="text-sm text-muted-foreground">{selected.track.description}</p>
                 ) : null}
+
+                {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
 
                 {m ? (
                   <div className="grid grid-cols-2 gap-2">

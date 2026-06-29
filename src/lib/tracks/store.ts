@@ -16,6 +16,7 @@ export type TrackInput = {
   activity?: string | null;
   source: "gpx" | "geojson" | "synthetic";
   siteId?: string | null;
+  userId?: string | null;
   points: Fix[];
 };
 
@@ -42,10 +43,10 @@ export async function insertTrack(sql: Sql, input: TrackInput): Promise<StoredTr
 
   return sql.begin(async (tx) => {
     const [track] = await tx<{ id: string }[]>`
-      INSERT INTO tracks (name, description, activity, source, site_id, started_at, ended_at, metrics)
+      INSERT INTO tracks (name, description, activity, source, site_id, user_id, started_at, ended_at, metrics)
       VALUES (
         ${input.name}, ${input.description ?? null}, ${input.activity ?? null}, ${input.source},
-        ${input.siteId ?? null}, ${iso(startedAt)}::timestamptz, ${iso(endedAt)}::timestamptz, ${JSON.stringify(metrics)}::jsonb
+        ${input.siteId ?? null}, ${input.userId ?? null}, ${iso(startedAt)}::timestamptz, ${iso(endedAt)}::timestamptz, ${JSON.stringify(metrics)}::jsonb
       )
       RETURNING id
     `;

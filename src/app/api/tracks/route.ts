@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getClient } from "@/db/client";
-import { requireAuth } from "@/lib/auth/guard";
+import { requireUser, currentUserId } from "@/lib/auth/guard";
 import { listTracks } from "@/lib/tracks/queries";
 import { parseTrack } from "@/lib/tracks/parse";
 import { insertTrack } from "@/lib/tracks/store";
@@ -8,10 +8,12 @@ import { insertTrack } from "@/lib/tracks/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** GET → all tracks with metrics + simplified paths (overview map + list). */
+/** GET → all tracks with metrics + simplified paths (overview map + list). Public; `canEdit` flags the owner's. */
 export async function GET() {
   try {
-    return NextResponse.json({ tracks: await listTracks() });
+    const uid = await currentUserId();
+    const tracks = (await listTracks()).map((t) => ({ ...t, canEdit: !!uid && t.userId === uid }));
+    return NextResponse.json({ tracks });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
@@ -22,8 +24,8 @@ export async function GET() {
  * metrics + segments are computed, and everything is persisted. Returns the new track's summary.
  */
 export async function POST(req: Request) {
-  const denied = await requireAuth();
-  if (denied) return denied;
+  const who = await requireUser();
+  if (who instanceof NextResponse) return who;
 
   let body: { content?: unknown; filename?: unknown; name?: unknown };
   try {
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
       name,
       activity: null,
       source: parsed.source,
+      userId: who.id,
       points: parsed.points,
     });
     return NextResponse.json({ id: stored.id, name, metrics: stored.metrics, segmentCount: stored.segmentCount });

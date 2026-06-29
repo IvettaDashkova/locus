@@ -157,6 +157,9 @@ export const tracks = pgTable(
     activity: text("activity"), // 'walk' | 'hike' | 'run' | 'cycle' | 'drive' | 'boat'
     source: text("source").notNull(), // 'gpx' | 'geojson' | 'synthetic'
     siteId: uuid("site_id").references(() => sites.id, { onDelete: "set null" }),
+    // Owner — who imported/built the track. Nullable (seeded/legacy tracks have no owner). Only the
+    // owner may edit/delete it; everyone can view. Set null if the user is removed.
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     path: lineString("path"), // simplified, SRID 4326 (nullable until computed)

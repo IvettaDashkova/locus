@@ -12,6 +12,9 @@ export type TrackSummary = {
   metrics: TrackMetrics | null;
   bbox: [number, number, number, number] | null;
   path: GeoJSON.LineString | null;
+  userId: string | null;
+  /** Whether the current viewer owns this track (set by the API route, not the query). */
+  canEdit?: boolean;
 };
 
 export type TrackPointRow = {
@@ -52,13 +55,14 @@ export async function listTracks(): Promise<TrackSummary[]> {
       ended_at: string | null;
       metrics: TrackMetrics | null;
       path: string | null;
+      user_id: string | null;
       xmin: number | null;
       ymin: number | null;
       xmax: number | null;
       ymax: number | null;
     }[]
   >`
-    SELECT id, name, description, activity, source, started_at, ended_at, metrics,
+    SELECT id, name, description, activity, source, started_at, ended_at, metrics, user_id,
            ST_AsGeoJSON(path) AS path,
            ST_XMin(path) AS xmin, ST_YMin(path) AS ymin, ST_XMax(path) AS xmax, ST_YMax(path) AS ymax
     FROM tracks
@@ -78,6 +82,7 @@ export async function listTracks(): Promise<TrackSummary[]> {
         ? [r.xmin, r.ymin, r.xmax, r.ymax]
         : null,
     path: parseGeo<GeoJSON.LineString>(r.path),
+    userId: r.user_id,
   }));
 }
 
@@ -101,13 +106,14 @@ export async function getTrack(id: string): Promise<TrackDetail | null> {
       ended_at: string | null;
       metrics: TrackMetrics | null;
       path: string | null;
+      user_id: string | null;
       xmin: number | null;
       ymin: number | null;
       xmax: number | null;
       ymax: number | null;
     }[]
   >`
-    SELECT id, name, description, activity, source, started_at, ended_at, metrics,
+    SELECT id, name, description, activity, source, started_at, ended_at, metrics, user_id,
            ST_AsGeoJSON(path) AS path,
            ST_XMin(path) AS xmin, ST_YMin(path) AS ymin, ST_XMax(path) AS xmax, ST_YMax(path) AS ymax
     FROM tracks WHERE id = ${id}
@@ -152,6 +158,7 @@ export async function getTrack(id: string): Promise<TrackDetail | null> {
           ? [t.xmin, t.ymin, t.xmax, t.ymax]
           : null,
       path: parseGeo<GeoJSON.LineString>(t.path),
+      userId: t.user_id,
     },
     points,
     segments: segRows.map((s) => ({

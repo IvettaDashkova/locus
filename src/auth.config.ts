@@ -27,4 +27,11 @@ export const authConfig = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: oauthProviders,
+  callbacks: {
+    // Surface the user id (JWT `sub`) on the session so route handlers can scope data by owner.
+    session({ session, token }) {
+      if (token.sub && session.user) (session.user as { id?: string }).id = token.sub;
+      return session;
+    },
+  },
 } satisfies NextAuthConfig;
