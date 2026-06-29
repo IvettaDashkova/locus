@@ -173,7 +173,9 @@ vector ∪ keyword search fused with reciprocal-rank fusion (+ optional `ST_DWit
 the answer is streamed grounded **only** in the retrieved chunks with `[n]` citations; out-of-corpus
 questions are declined, not hallucinated. Cited places drop pins on the shared map. Answers respond
 in the user's language. Embeddings run through the Vercel AI SDK (Gemini `gemini-embedding-001`,
-768-d) so they work on serverless; the model is one swappable constant. Evals
+768-d) with **asymmetric retrieval** — documents are embedded as `RETRIEVAL_DOCUMENT` at ingest and
+queries as `RETRIEVAL_QUERY`, so passage and query vectors land in a comparable space — and run on
+serverless with the model as one swappable constant. Evals
 (`npm run eval -- --module=ask`) cover `recall@k`, `geo_match`, and `refusal_correct`.
 
 ### Act (Phase 3)
