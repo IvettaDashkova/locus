@@ -15,6 +15,7 @@
     "db:check": "tsx scripts/check-db.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:tracks": "tsx scripts/seed-tracks.ts",
+    "seed:capture": "tsx scripts/seed-capture.ts",
     "ingest": "tsx scripts/ingest.ts",
     "ask:try": "tsx scripts/ask-try.ts",
     "act:try": "tsx scripts/act-try.ts",
