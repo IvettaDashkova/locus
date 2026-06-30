@@ -8,7 +8,7 @@ import postgres from "postgres";
  * "Field site survey (sample)", Incident Report, etc.) is left untouched. Idempotent. Prints what it
  * removes. Run: `npm run clean:test`.
  */
-const TEST_FORM_NAMES = ["T", "Test form", "Prod test"];
+const TEST_FORM_NAMES = ["T", "Test form", "Prod test", "London Details", "Field Survey Form"];
 
 async function main() {
   const url = process.env.DATABASE_URL;
