@@ -7,7 +7,7 @@
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
 > and trajectory analytics.
 
-**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini `gemini-embedding-001`, 768-d) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
+**Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Auth.js · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini `gemini-embedding-001`, 768-d) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
 
 > **100% free stack** — no paid services. The LLM provider is a one-line swap via the AI SDK, so a
 > paid model (e.g. Claude) can drop in later without rearchitecting. Full mapping in
@@ -31,7 +31,7 @@ doesn't care whether you're tracking storefronts, inspections, deliveries or tra
 | Module | What it does | Demonstrates |
 | --- | --- | --- |
 | **Capture** | Build data-entry forms from a plain-English description; location fields are real map widgets. | Structured LLM output (tool-calling), RJSF + AJV, Zod, GeoJSON |
-| **Ask** | A geospatial RAG assistant over your data + open sources — cited answers *and* a map of mentioned places. | RAG, pgvector, hybrid search, reranking, evals |
+| **Ask** | A geospatial RAG assistant over your data + open sources — cited answers *and* a map of mentioned places. | RAG, pgvector, hybrid search (RRF fusion), grounding gate, evals |
 | **Act** | An agent with geo tools (geocode, route, isochrone, nearby, weather) exposed over **MCP** and used in-app. | MCP server, agent orchestration, tool-calling, observability |
 | **Tracks** | Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing. | PostGIS geography analytics, stay-point stop detection, animated MapLibre playback + density heatmap, grounded LLM |
 
@@ -80,6 +80,9 @@ four toy repos.
   Gemini free tier (or local Ollama) for the LLM, and embeddings via the AI SDK (Gemini
   `gemini-embedding-001`, 768-d, free tier — chosen over local ONNX, which fails to load on
   serverless). The whole demo runs for anyone at zero cost — see [`FREE_STACK.md`](./FREE_STACK.md).
+- **Public to browse, sign-in to save.** Auth.js (JWT sessions) — email/password (scrypt) plus
+  optional GitHub/Google OAuth. Reading every module is open; only *writing* (saving submissions,
+  importing/building tracks) requires an account, and tracks are editable/deletable by their owner.
 - **Evals are a first-class, cross-cutting concern**, not a per-feature afterthought (see below).
 
 ## Tests & evals
@@ -94,7 +97,7 @@ Two complementary layers:
 | Module | Key metrics |
 | --- | --- |
 | Capture | schema_valid · field_coverage · conditional_ok · geo_format_ok |
-| Ask | recall@k · faithfulness (LLM-as-judge) · geo_match · refusal_correct |
+| Ask | recall@k · geo_match · refusal_correct |
 | Act | task_success · tool_choice · step_efficiency · no_hallucinated_tools |
 | Tracks | metric formulas vs. hand-calculated worked examples |
 
@@ -113,13 +116,14 @@ Every module is backed by a small HTTP API documented with **OpenAPI 3.0** and b
 | --- | --- | --- |
 | `/api/health` | GET | DB + PostGIS/pgvector health |
 | `/api/usage` | GET | Gemini free-tier quota left today |
+| `/api/auth/*` | GET · POST | Auth.js — sign-in / session / OAuth callbacks |
 | `/api/generate` | POST | Capture: prompt → form schema |
-| `/api/submissions` | GET · POST | List / save Capture submissions |
+| `/api/submissions` | GET · POST | List (public) / save (sign-in required) Capture submissions |
 | `/api/ask` | POST | Ask: grounded RAG answer (streaming) |
 | `/api/act` | POST | Act: agent task (NDJSON stream) |
 | `/api/geocode` | GET | Place typeahead (Photon/OSM) |
-| `/api/tracks` | GET · POST | List tracks / import GPX·GeoJSON |
-| `/api/tracks/{id}` | GET | Track fixes + segments |
+| `/api/tracks` | GET · POST | List (public) / import GPX·GeoJSON (sign-in) |
+| `/api/tracks/{id}` | GET · PATCH · DELETE | Track detail / rename·retag / delete (owner only) |
 | `/api/tracks/{id}/explain` | POST | Grounded trip briefing (streaming) |
 | `/api/tracks/heatmap` | GET | Density-heatmap points (GeoJSON) |
 | `/api/tracks/build` | POST | Build a track from a drawn route (boats routed by sea) |
@@ -130,12 +134,13 @@ Every module is backed by a small HTTP API documented with **OpenAPI 3.0** and b
 ```bash
 git clone <repo>
 cd locus
-cp .env.example .env.local            # GEMINI_API_KEY (or Ollama), DATABASE_URL (Supabase/Neon), ORS_API_KEY, LANGFUSE_* — all free, see FREE_STACK.md
+cp .env.example .env.local            # GEMINI_API_KEY (or Ollama), DATABASE_URL (Supabase/Neon), AUTH_SECRET, ORS_API_KEY, LANGFUSE_* — all free, see FREE_STACK.md
 docker compose up -d                  # Postgres + PostGIS + pgvector
 npm install
 npm run db:migrate
 npm run seed                          # sample sites
 npm run seed:tracks                   # synthetic GPS tracks for the Tracks module
+npm run seed:capture                  # sample Capture submissions (map pins)
 npm run ingest                        # embed the corpus for Ask
 npm run dev                           # http://localhost:3000
 npm test                              # unit tests (Vitest) — no DB/LLM needed
@@ -207,6 +212,8 @@ server-side and grounded:
   move/stop dwell timeline, all cursored to the playback head.
 - **"Explain this trip"** streams a plain-language briefing from the LLM, handed the *computed*
   metrics as grounded facts and forbidden from doing arithmetic of its own.
+- **Owner-scoped management.** Imported/built tracks belong to the signed-in user — rename, re-tag
+  or delete them (delete cascades points + segments); browsing all tracks stays public.
 
 Metrics are verified by evals against **hand-calculated worked examples**
 (`npm run eval -- --module=tracks`): distance/speed, elevation gain/loss, and the stop-detection

@@ -69,7 +69,7 @@ const en: Dict = {
 
   "status.inDevelopment": "In development",
   "module.intro": "In active development — what it will showcase:",
-  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "ask.tech": "RAG, pgvector, hybrid search (RRF), cited answers",
   "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
   "tracks.tech": "PostGIS analytics, stop detection, MapLibre playback, SVG data-viz",
 
@@ -232,7 +232,7 @@ const uk: Dict = {
 
   "status.inDevelopment": "В розробці",
   "module.intro": "В активній розробці — що буде показано:",
-  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "ask.tech": "RAG, pgvector, hybrid search (RRF), cited answers",
   "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
   "tracks.tech": "PostGIS analytics, stop detection, MapLibre playback, SVG data-viz",
 
@@ -395,7 +395,7 @@ const pl: Dict = {
 
   "status.inDevelopment": "W rozwoju",
   "module.intro": "W aktywnym rozwoju — co pokaże:",
-  "ask.tech": "RAG, pgvector, hybrid search, reranking, cited answers",
+  "ask.tech": "RAG, pgvector, hybrid search (RRF), cited answers",
   "act.tech": "MCP server, agent orchestration, tool-calling, Langfuse",
   "tracks.tech": "PostGIS analytics, stop detection, MapLibre playback, SVG data-viz",
 
