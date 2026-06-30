@@ -49,7 +49,7 @@ async function main() {
 
     const [form] = await sql<{ id: string }[]>`
       INSERT INTO forms (name, json_schema, ui_schema)
-      VALUES (${FORM_TITLE}, ${sql.json(jsonSchema)}, ${sql.json(uiSchema)})
+      VALUES (${FORM_TITLE}, ${sql.json(jsonSchema as never)}, ${sql.json(uiSchema as never)})
       RETURNING id
     `;
 
@@ -68,7 +68,7 @@ async function main() {
       };
       await sql`
         INSERT INTO submissions (form_id, site_id, data, geom)
-        VALUES (${form.id}, ${site.id}, ${sql.json(data)},
+        VALUES (${form.id}, ${site.id}, ${sql.json(data as never)},
                 ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326))
       `;
     }
