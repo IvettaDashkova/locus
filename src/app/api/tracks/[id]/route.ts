@@ -17,7 +17,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     detail.track.canEdit = !!uid && detail.track.userId === uid;
     return NextResponse.json(detail);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    console.error("track GET failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }
 
@@ -62,7 +63,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     return NextResponse.json({ id: rows[0].id });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    console.error("track PATCH failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }
 
@@ -82,6 +84,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
     return NextResponse.json({ id: rows[0].id });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    console.error("track DELETE failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }

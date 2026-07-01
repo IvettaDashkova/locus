@@ -1,7 +1,10 @@
+import { after } from "next/server";
 import { streamText } from "ai";
 import { getModel } from "@/lib/ai/provider";
 import { retrieve } from "@/lib/ask/retrieve";
-import { recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
+import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
+import { requireAuth } from "@/lib/auth/guard";
+import { flushTracing } from "@/instrumentation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +40,10 @@ const SYSTEM = [
 ].join(" ");
 
 export async function POST(req: Request) {
+  // Ask spends the shared daily AI budget — sign-in required. Anonymous visitors use the demo answer.
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: { question?: unknown };
   try {
     body = await req.json();
@@ -45,6 +52,14 @@ export async function POST(req: Request) {
   }
   const question = typeof body.question === "string" ? body.question.trim() : "";
   if (!question) return new Response("A 'question' is required.", { status: 400 });
+  if (question.length > 2000) return new Response("That question is too long.", { status: 413 });
+
+  // Atomically reserve the answer's round-trip up front so an exhausted quota returns a clean 429
+  // instead of a raw model error mid-stream, and concurrent callers can't race past the cap. Open to
+  // everyone — no sign-in required to try Ask. We reserve 1 here and reconcile extra steps onFinish.
+  if (!(await reserveAiBudget(1))) {
+    return new Response("The daily AI budget is spent — it resets at midnight (America/Los_Angeles).", { status: 429 });
+  }
 
   const { chunks, topSimilarity } = await retrieve(question, { k: 6 });
 
@@ -68,11 +83,13 @@ export async function POST(req: Request) {
     model: getModel(),
     system: `${SYSTEM}\n\nSources:\n${context}`,
     prompt: question,
-    onFinish: ({ steps }) => void recordAiUsage(steps?.length ?? 1),
+    // One round-trip is already reserved; top up only the additional steps the model actually took.
+    onFinish: ({ steps }) => void recordAiUsage((steps?.length ?? 1) - 1),
     onError: ({ error }) => {
       if (isQuotaError(String(error))) void markExhausted();
     },
   });
 
+  after(flushTracing); // export buffered Langfuse spans once the stream has drained
   return result.toTextStreamResponse({ headers: sourcesHeader(sources) });
 }

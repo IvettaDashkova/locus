@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Ajv2020 from "ajv/dist/2020";
 import { getClient } from "@/db/client";
 import { requireAuth } from "@/lib/auth/guard";
-import { siteLocationField, type GeneratedSchema } from "@/lib/capture/schema-spec";
+import { siteLocationField, generatedSchema, type GeneratedSchema } from "@/lib/capture/schema-spec";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,7 +46,8 @@ export async function GET() {
     }));
     return NextResponse.json({ items });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    console.error("submissions GET failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }
 
@@ -87,17 +88,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { name, jsonSchema, uiSchema, data, siteId: providedSiteId } = body;
-  if (!jsonSchema || typeof jsonSchema !== "object" || !data || typeof data !== "object") {
+  const { name, uiSchema, data, siteId: providedSiteId } = body;
+  if (!body.jsonSchema || typeof body.jsonSchema !== "object" || !data || typeof data !== "object") {
     return NextResponse.json({ error: "jsonSchema and data are required." }, { status: 400 });
   }
+
+  // Re-derive the schema against our own Zod source of truth BEFORE compiling it. AJV.compile on a
+  // raw client-supplied schema is a DoS surface ($ref recursion, ReDoS patterns, deep allOf);
+  // `generatedSchema` has no $ref/$id branch, so this both rejects those and pins the trusted shape.
+  const schemaParse = generatedSchema.safeParse(body.jsonSchema);
+  if (!schemaParse.success) {
+    return NextResponse.json({ error: "Unsupported form schema." }, { status: 400 });
+  }
+  const jsonSchema = schemaParse.data;
 
   // Server-side guard: never trust the client's data.
   let validate;
   try {
     validate = ajv.compile(jsonSchema as object);
-  } catch (e) {
-    return NextResponse.json({ error: `Invalid schema: ${e instanceof Error ? e.message : e}` }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Unsupported form schema." }, { status: 400 });
   }
   if (!validate(data)) {
     return NextResponse.json({ error: "Data does not match the schema.", issues: validate.errors }, { status: 422 });
@@ -147,9 +157,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    console.error("submissions POST failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }

@@ -13,19 +13,6 @@ type Mode = "signin" | "register";
 export function LoginForm({ oauth }: { oauth: ("github" | "google")[] }) {
   const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("signin");
-  const [state, action, pending] = useActionState<AuthState, FormData>(
-    mode === "signin" ? signInWithPassword : register,
-    null,
-  );
-
-  const errorKey =
-    state?.error === "invalid"
-      ? "auth.invalid"
-      : state?.error === "taken"
-        ? "auth.taken"
-        : state?.error === "weak"
-          ? "auth.weak"
-          : null;
 
   return (
     <div className="w-full max-w-sm rounded-2xl border bg-card/95 p-6 shadow-xl backdrop-blur">
@@ -37,50 +24,10 @@ export function LoginForm({ oauth }: { oauth: ("github" | "google")[] }) {
         <p className="text-sm text-muted-foreground">{t("auth.subtitle")}</p>
       </div>
 
-      {/* key=mode resets the form fields and useActionState error when switching tabs */}
-      <form action={action} className="space-y-3" key={mode}>
-        {mode === "register" ? (
-          <Field icon={<User className="size-4" />}>
-            <input
-              name="name"
-              type="text"
-              autoComplete="name"
-              placeholder={t("auth.name")}
-              className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            />
-          </Field>
-        ) : null}
-        <Field icon={<Mail className="size-4" />}>
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            placeholder={t("auth.email")}
-            className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          />
-        </Field>
-        <Field icon={<Lock className="size-4" />}>
-          <input
-            name="password"
-            type="password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            required
-            minLength={mode === "register" ? 8 : undefined}
-            placeholder={t("auth.password")}
-            className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          />
-        </Field>
-
-        {errorKey ? <p className="text-sm text-destructive">⚠ {t(errorKey)}</p> : null}
-
-        <Button type="submit" disabled={pending} className="w-full gap-2">
-          {mode === "signin" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
-          {pending
-            ? t("auth.signing")
-            : t(mode === "signin" ? "auth.signin" : "auth.register")}
-        </Button>
-      </form>
+      {/* Keyed by mode so the whole credentials form — including its useActionState hook — remounts on
+          a tab switch. That resets both the error state AND rebinds the action; keying the <form>
+          alone (the hook lived in the parent) left the previous action's error/result stuck. */}
+      <CredentialsForm key={mode} mode={mode} />
 
       <button
         type="button"
@@ -119,6 +66,71 @@ export function LoginForm({ oauth }: { oauth: ("github" | "google")[] }) {
         {t("auth.backToApp")}
       </Link>
     </div>
+  );
+}
+
+/**
+ * The email/password form for one mode. Mounted with `key={mode}` by the parent, so each tab switch
+ * gives it a fresh `useActionState` — the correct action bound and no leftover error from the other tab.
+ */
+function CredentialsForm({ mode }: { mode: Mode }) {
+  const { t } = useI18n();
+  const [state, action, pending] = useActionState<AuthState, FormData>(
+    mode === "signin" ? signInWithPassword : register,
+    null,
+  );
+
+  const errorKey =
+    state?.error === "invalid"
+      ? "auth.invalid"
+      : state?.error === "taken"
+        ? "auth.taken"
+        : state?.error === "weak"
+          ? "auth.weak"
+          : null;
+
+  return (
+    <form action={action} className="space-y-3">
+      {mode === "register" ? (
+        <Field icon={<User className="size-4" />}>
+          <input
+            name="name"
+            type="text"
+            autoComplete="name"
+            placeholder={t("auth.name")}
+            className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </Field>
+      ) : null}
+      <Field icon={<Mail className="size-4" />}>
+        <input
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder={t("auth.email")}
+          className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        />
+      </Field>
+      <Field icon={<Lock className="size-4" />}>
+        <input
+          name="password"
+          type="password"
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
+          required
+          minLength={mode === "register" ? 8 : undefined}
+          placeholder={t("auth.password")}
+          className="w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        />
+      </Field>
+
+      {errorKey ? <p className="text-sm text-destructive">⚠ {t(errorKey)}</p> : null}
+
+      <Button type="submit" disabled={pending} className="w-full gap-2">
+        {mode === "signin" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
+        {pending ? t("auth.signing") : t(mode === "signin" ? "auth.signin" : "auth.register")}
+      </Button>
+    </form>
   );
 }
 

@@ -123,10 +123,17 @@ export function buildSchema(input: EmitInput): { jsonSchema: GeneratedSchema; ui
     if (f.required) required.push(f.name);
   }
 
-  const allOf = (input.conditionals ?? []).map((c) => ({
-    if: { properties: { [c.whenField]: { const: c.equals } }, required: [c.whenField] },
-    then: { required: c.requireFields ?? [] },
-  }));
+  // JSON Schema `required` only constrains properties that exist, so a conditional that names a
+  // field absent from `properties` is silently a no-op. Drop dangling references (and skip empties)
+  // so every emitted conditional actually enforces something on both RJSF/AJV (client) and AJV (server).
+  const known = new Set(Object.keys(properties));
+  const allOf = (input.conditionals ?? [])
+    .filter((c) => known.has(c.whenField))
+    .map((c) => ({
+      if: { properties: { [c.whenField]: { const: c.equals } }, required: [c.whenField] },
+      then: { required: (c.requireFields ?? []).filter((f) => known.has(f)) },
+    }))
+    .filter((c) => c.then.required.length > 0);
 
   const jsonSchema: GeneratedSchema = {
     title: input.title,

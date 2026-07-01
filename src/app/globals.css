@@ -211,20 +211,26 @@
 .locus-shell-map .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib,
 .locus-shell-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { order: 1; margin: 0; }
 
-/* Map hover tooltips for submissions */
+/* Map hover tooltips. `!important` so the theme's colors beat maplibre-gl.css's default white
+   background (its stylesheet is imported after globals.css, so plain rules lose the cascade —
+   which left tooltips light in dark mode). The tip arrow is colored per side. */
 .maplibregl-popup-content {
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--card-foreground);
+  background: var(--card) !important;
+  color: var(--card-foreground) !important;
   box-shadow: 0 6px 24px oklch(0 0 0 / 0.12);
   padding: 0.625rem 0.75rem;
   font-size: 0.8rem;
 }
-.maplibregl-popup-tip {
-  border-top-color: var(--card) !important;
-  border-bottom-color: var(--card) !important;
-}
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip { border-bottom-color: var(--card) !important; }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip { border-top-color: var(--card) !important; }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--card) !important; }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--card) !important; }
 .locus-popup .title { font-weight: 600; }
 .locus-popup .form { margin-bottom: 0.35rem; font-size: 0.7rem; color: var(--muted-foreground); }
 .locus-popup .row { display: flex; justify-content: space-between; gap: 0.75rem; }

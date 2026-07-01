@@ -16,7 +16,10 @@ async function main() {
       t.name,
       { description: t.description, inputSchema: (t.inputSchema as z.ZodObject<z.ZodRawShape>).shape },
       async (args: unknown) => {
-        const r = await (t.run as (i: unknown) => Promise<ToolRun>)(args);
+        // Parse through the Zod schema so defaults/coercion are applied exactly as in the in-app
+        // agent path — otherwise `run` receives raw args and Zod defaults (e.g. radiusM) are missing.
+        const input = (t.inputSchema as z.ZodTypeAny).parse(args);
+        const r = await (t.run as (i: unknown) => Promise<ToolRun>)(input);
         return { content: [{ type: "text" as const, text: `${r.summary}\n\n${JSON.stringify(r.data, null, 2)}` }] };
       },
     );

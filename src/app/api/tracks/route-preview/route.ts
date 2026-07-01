@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { seaRoute } from "@/lib/tracks/sea-route";
 import { isActivity } from "@/lib/tracks/presets";
+import { requireAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +13,13 @@ const isWaypoint = (v: unknown): v is [number, number] =>
  * POST { activity, waypoints } → { path: [lng,lat][] } — the polyline the route would follow, so the
  * builder can preview it live as the activity changes. Boats are routed by sea (around land); every
  * other activity goes straight through the drawn waypoints. No persistence; geometry only.
+ *
+ * Part of the (sign-in-gated) track builder, so it requires auth too — no anonymous compute.
  */
 export async function POST(req: Request) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: { activity?: unknown; waypoints?: unknown };
   try {
     body = await req.json();

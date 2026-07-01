@@ -36,6 +36,9 @@ export async function POST(req: Request) {
   if (waypoints.length < 2) {
     return NextResponse.json({ error: "At least two waypoints are required." }, { status: 422 });
   }
+  if (waypoints.length > 1000) {
+    return NextResponse.json({ error: "Too many waypoints (max 1000)." }, { status: 422 });
+  }
   const name =
     typeof body.name === "string" && body.name.trim()
       ? body.name.trim()

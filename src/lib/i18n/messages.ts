@@ -34,6 +34,9 @@ const en: Dict = {
   "auth.google": "Continue with Google",
   "auth.backToApp": "Back to the app",
   "auth.saveRequiresLogin": "Sign in to save your data.",
+  "auth.aiRequiresLogin": "Sign in to run this live — or view the demo below.",
+  "demo.try": "View demo",
+  "demo.note": "Demo data — sign in to run it on your own input.",
   "auth.signout": "Sign out",
   "auth.account": "Account",
 
@@ -197,6 +200,9 @@ const uk: Dict = {
   "auth.google": "Увійти через Google",
   "auth.backToApp": "Повернутися до застосунку",
   "auth.saveRequiresLogin": "Увійдіть, щоб зберегти дані.",
+  "auth.aiRequiresLogin": "Увійдіть, щоб запустити наживо — або перегляньте демо нижче.",
+  "demo.try": "Показати демо",
+  "demo.note": "Демо-дані — увійдіть, щоб запустити на власному вводі.",
   "auth.signout": "Вийти",
   "auth.account": "Обліковий запис",
 
@@ -360,6 +366,9 @@ const pl: Dict = {
   "auth.google": "Kontynuuj z Google",
   "auth.backToApp": "Powrót do aplikacji",
   "auth.saveRequiresLogin": "Zaloguj się, aby zapisać dane.",
+  "auth.aiRequiresLogin": "Zaloguj się, aby uruchomić na żywo — lub zobacz demo poniżej.",
+  "demo.try": "Zobacz demo",
+  "demo.note": "Dane demo — zaloguj się, aby uruchomić na własnych danych.",
   "auth.signout": "Wyloguj się",
   "auth.account": "Konto",
 

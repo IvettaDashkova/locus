@@ -59,7 +59,7 @@ export function AppShell({ children, userName }: { children: React.ReactNode; us
           {userName ? (
             <UserMenu name={userName} />
           ) : (
-            <Button render={<Link href="/login" />} variant="outline" size="sm" className="gap-1.5">
+            <Button render={<Link href="/login" />} nativeButton={false} variant="outline" size="sm" className="gap-1.5">
               <LogIn className="size-4" />
               {t("auth.signin")}
             </Button>

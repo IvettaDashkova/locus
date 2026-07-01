@@ -15,7 +15,8 @@ export async function GET() {
     const tracks = (await listTracks()).map((t) => ({ ...t, canEdit: !!uid && t.userId === uid }));
     return NextResponse.json({ tracks });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    console.error("tracks GET failed", e);
+    return NextResponse.json({ error: "Internal error." }, { status: 500 });
   }
 }
 
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
   }
   const content = typeof body.content === "string" ? body.content : "";
   if (!content.trim()) return NextResponse.json({ error: "A 'content' string is required." }, { status: 400 });
+  if (content.length > 5_000_000) {
+    return NextResponse.json({ error: "That track file is too large (max 5 MB)." }, { status: 413 });
+  }
 
   try {
     const parsed = parseTrack(content, typeof body.filename === "string" ? body.filename : undefined);

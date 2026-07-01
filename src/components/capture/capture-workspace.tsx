@@ -32,19 +32,25 @@ export function CaptureWorkspace() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/submissions");
+      const res = await fetch("/api/submissions", { signal });
       const body = await res.json();
       if (res.ok) setItems(body.items ?? []);
     } catch {
-      /* ignore */
+      /* ignore (includes AbortError when navigating away) */
     }
   }, []);
 
   useEffect(() => {
+    // Abort the fetch if we navigate away before it resolves. Against a slow DB the request can be
+    // in-flight for seconds; leaving it running holds one of the browser's ~6 per-host connections,
+    // and enough stale requests starve the App Router's own navigation (RSC) fetches — which shows as
+    // the dev "rendering" indicator hanging and the next page never appearing.
+    const ctrl = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    refresh();
+    refresh(ctrl.signal);
+    return () => ctrl.abort();
   }, [refresh]);
 
   // Reserve the right rail's width in the map camera (desktop only, where the rail is persistent).

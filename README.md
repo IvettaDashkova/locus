@@ -35,6 +35,23 @@ doesn't care whether you're tracking storefronts, inspections, deliveries or tra
 | **Act** | An agent with geo tools (geocode, route, isochrone, nearby, weather) exposed over **MCP** and used in-app. | MCP server, agent orchestration, tool-calling, observability |
 | **Tracks** | Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing. | PostGIS geography analytics, stay-point stop detection, animated MapLibre playback + density heatmap, grounded LLM |
 
+## Screenshots
+
+> The three AI modules are shown in their built-in **demo mode** — deterministic, signed-out, no live
+> LLM call — produced by `node scripts/screenshots.mjs` (see [Reproducing the screenshots](#reproducing-the-screenshots)).
+
+| Capture — NL prompt → editable JSON Schema → rendered form with a map location widget | Ask — grounded, cited answer with the mentioned places pinned on the map |
+| --- | --- |
+| ![Capture](docs/screenshots/capture.png) | ![Ask](docs/screenshots/ask.png) |
+
+**Act** — an agent picks geo tools (geocode · route · weather) and draws the result on the shared map:
+
+![Act](docs/screenshots/act.png)
+
+**Tracks** is best explored live (import a trajectory, then scrub the animated playback under the
+PostGIS metrics and SVG profiles): the [live demo](https://locus-dun.vercel.app/tracks), or run
+`node scripts/screenshot-tracks.mjs` against your own seeded database to generate `docs/screenshots/tracks.png`.
+
 ## Architecture
 
 ```
@@ -80,9 +97,17 @@ four toy repos.
   Gemini free tier (or local Ollama) for the LLM, and embeddings via the AI SDK (Gemini
   `gemini-embedding-001`, 768-d, free tier — chosen over local ONNX, which fails to load on
   serverless). The whole demo runs for anyone at zero cost — see [`FREE_STACK.md`](./FREE_STACK.md).
-- **Public to browse, sign-in to save.** Auth.js (JWT sessions) — email/password (scrypt) plus
-  optional GitHub/Google OAuth. Reading every module is open; only *writing* (saving submissions,
-  importing/building tracks) requires an account, and tracks are editable/deletable by their owner.
+- **Public to browse, sign-in to compute.** Auth.js (JWT sessions) — email/password (scrypt) plus
+  optional GitHub/Google OAuth. Reading every module is open. **Anything that spends the shared LLM
+  budget or writes data requires an account**: form generation, Ask, Act, the trip briefing, and all
+  saves/imports/edits/deletes. The gate is enforced *server-side* on every such route (a single
+  `requireAuth()` returns `401` before any work), and the AI budget is reserved atomically per call so
+  concurrent requests can't overshoot the free-tier quota. Tracks are editable/deletable by their owner.
+- **A built-in demo for signed-out visitors.** Because the AI features are gated, every AI module ships
+  a one-click **demo** that loads a pre-recorded, representative result entirely client-side — citations
+  + map pins for Ask, tool tags + a routed line for Act, a Zod-valid schema + a filled form for Capture.
+  No network, no LLM, no keys: the visualization is faithful to the live pipeline and works even when the
+  daily quota is spent. (Tracks needs no canned data — the seeded tracks are public to browse already.)
 - **Evals are a first-class, cross-cutting concern**, not a per-feature afterthought (see below).
 
 ## Tests & evals
@@ -117,17 +142,20 @@ Every module is backed by a small HTTP API documented with **OpenAPI 3.0** and b
 | `/api/health` | GET | DB + PostGIS/pgvector health |
 | `/api/usage` | GET | Gemini free-tier quota left today |
 | `/api/auth/*` | GET · POST | Auth.js — sign-in / session / OAuth callbacks |
-| `/api/generate` | POST | Capture: prompt → form schema |
-| `/api/submissions` | GET · POST | List (public) / save (sign-in required) Capture submissions |
-| `/api/ask` | POST | Ask: grounded RAG answer (streaming) |
-| `/api/act` | POST | Act: agent task (NDJSON stream) |
-| `/api/geocode` | GET | Place typeahead (Photon/OSM) |
-| `/api/tracks` | GET · POST | List (public) / import GPX·GeoJSON (sign-in) |
-| `/api/tracks/{id}` | GET · PATCH · DELETE | Track detail / rename·retag / delete (owner only) |
-| `/api/tracks/{id}/explain` | POST | Grounded trip briefing (streaming) |
-| `/api/tracks/heatmap` | GET | Density-heatmap points (GeoJSON) |
-| `/api/tracks/build` | POST | Build a track from a drawn route (boats routed by sea) |
-| `/api/tracks/route-preview` | POST | Preview a route's geometry for an activity |
+| `/api/generate` | POST | Capture: prompt → form schema · **sign-in** |
+| `/api/submissions` | GET · POST | List (public) / save (**sign-in**) Capture submissions |
+| `/api/ask` | POST | Ask: grounded RAG answer, streaming · **sign-in** |
+| `/api/act` | POST | Act: agent task, NDJSON stream · **sign-in** |
+| `/api/geocode` | GET | Place typeahead (Photon/OSM) — public helper |
+| `/api/tracks` | GET · POST | List (public) / import GPX·GeoJSON (**sign-in**) |
+| `/api/tracks/{id}` | GET · PATCH · DELETE | Track detail (public) / rename·retag / delete (**owner only**) |
+| `/api/tracks/{id}/explain` | POST | Grounded trip briefing, streaming · **sign-in** |
+| `/api/tracks/heatmap` | GET | Density-heatmap points (GeoJSON) — public |
+| `/api/tracks/build` | POST | Build a track from a drawn route, boats routed by sea · **sign-in** |
+| `/api/tracks/route-preview` | POST | Preview a route's geometry for an activity · **sign-in** |
+
+GET reads stay public so the map and seeded data are browsable; every budget-spending or mutating
+route returns `401 {"error":"auth_required"}` when called without a session.
 
 ## Running locally
 
@@ -218,6 +246,63 @@ server-side and grounded:
 Metrics are verified by evals against **hand-calculated worked examples**
 (`npm run eval -- --module=tracks`): distance/speed, elevation gain/loss, and the stop-detection
 min-dwell gate. Seed synthetic tracks with `npm run seed:tracks`.
+
+## Functionality walkthrough
+
+What a user can actually do, module by module — and exactly where the sign-in line falls.
+
+**Top bar (every module).** A live **AI budget** badge shows how many free-tier model calls remain
+today (e.g. `AI 20/20`), a theme toggle, a language switcher (English · Українська · Polski, auto-
+detected and persisted), an onboarding tour, and **Sign in**. The left rail switches modules; the
+map underneath is shared, so results from any module render on the same canvas.
+
+**Capture — design a form, then fill it.**
+1. Click **New form** and describe the form in plain English (e.g. *"a field survey: site name, the
+   location on a map, surface condition, whether there's damage, and notes if damaged"*).
+2. **Generate form** (sign-in) calls the LLM, which emits a field list through one `emit_schema`
+   tool; the output is Zod-guarded and compiled to a JSON Schema. The schema appears in an **editable
+   inspector** on the left and a **live RJSF form** on the right — location fields are real MapLibre
+   widgets (`geo-point` click-to-place, `geo-polygon` draw-and-measure).
+3. Conditional fields work: tick *Any damage?* and *Damage notes* becomes required.
+4. **Save submission** (sign-in) persists it; the designated geo-point creates/selects a `site` and
+   projects into a PostGIS `geometry(Point,4326)` column. New pins drop on the map and into the rail.
+5. **View demo** loads a complete, validated example (schema + a filled "Site Visit Survey") with no
+   network call — what the screenshot shows.
+
+**Ask — question in, cited answer + map out.** Type a question (or pick a suggestion). The answer is
+**streamed token-by-token**, grounded only in retrieved chunks, with inline `[n]` citations that
+expand to titled, licensed sources; the **places it cites drop pins** on the map and the camera fits
+them. Out-of-corpus questions are declined, not hallucinated. **View demo** replays a full Kraków
+Q&A with its two sources and pins. *Sign-in to ask live* (it spends the budget).
+
+**Act — a task, an agent, real tools.** Give a location task; the agent plans and calls real geo
+tools — geocode, route, isochrone, places-nearby, weather, elevation, sun-times — and you watch the
+**tool tags** appear as it works while **GeoJSON results draw on the map** (points, route lines,
+isochrone polygons). The same seven tools are also a standalone **MCP server**, so Claude Desktop can
+drive them. **View demo** replays a Kyiv→Lviv drive-time + weather run with its route and endpoints.
+*Sign-in to run live.*
+
+**Tracks — import, measure, replay (mostly public).** Browsing is fully open: pick any seeded track
+to see **PostGIS metrics** (distance, moving time, avg/max speed, ascent, stop count), **inline SVG**
+elevation/speed/dwell charts, and an **animated playback** scrubbed by real elapsed time, plus a
+multi-track **density heatmap**. Sign-in unlocks the *write* side: **import** a GPX/GeoJSON file,
+**build** a track by drawing waypoints (boats routed around land by sea), **rename/retag/delete**
+your own tracks, and stream the grounded **"explain this trip"** briefing.
+
+### Reproducing the screenshots
+
+The images under `docs/screenshots/` are generated against a running app, using the demo buttons so
+every shot is deterministic and spends no AI budget:
+
+```bash
+npm run dev                              # in one shell (note the port it prints)
+npx playwright install chromium          # first time only
+node scripts/screenshots.mjs http://localhost:3000
+```
+
+The script skips the onboarding tour, clicks each module's **View demo**, opens a seeded track, and
+writes `capture.png` · `ask.png` · `act.png` · `tracks.png`. (The Tracks shot needs the database
+reachable; the others are pure client-side demo data.)
 
 ## Engineering notes
 

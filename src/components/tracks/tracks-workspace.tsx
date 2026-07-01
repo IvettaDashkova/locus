@@ -96,9 +96,13 @@ export function TracksWorkspace() {
 
   const playback = useTrackPlayback(selected?.points ?? []);
 
-  const loadTracks = useCallback(async () => {
-    const res = await fetch("/api/tracks", { cache: "no-store" });
-    if (res.ok) setTracks((await res.json()).tracks ?? []);
+  const loadTracks = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch("/api/tracks", { cache: "no-store", signal });
+      if (res.ok) setTracks((await res.json()).tracks ?? []);
+    } catch {
+      /* ignore (includes AbortError when navigating away) */
+    }
   }, []);
 
   const selectTrack = useCallback(async (id: string) => {
@@ -116,14 +120,22 @@ export function TracksWorkspace() {
 
   useEffect(() => {
     // Defer out of the effect body so the initial fetches don't set state synchronously on mount.
+    // Abort both on unmount: against a slow DB these can be in-flight for seconds, and a stale request
+    // left running holds one of the browser's ~6 per-host connections — enough of them starve the App
+    // Router's navigation (RSC) fetches, which manifests as the dev "rendering" indicator hanging and
+    // the next page never loading when clicking through the modules repeatedly.
+    const ctrl = new AbortController();
     const id = setTimeout(() => {
-      loadTracks();
-      fetch("/api/tracks/heatmap", { cache: "no-store" })
+      loadTracks(ctrl.signal);
+      fetch("/api/tracks/heatmap", { cache: "no-store", signal: ctrl.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => d && setHeatmap(d))
         .catch(() => {});
     }, 0);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      ctrl.abort();
+    };
   }, [loadTracks]);
 
   useEffect(() => {
@@ -171,11 +183,15 @@ export function TracksWorkspace() {
     }
   }
 
-  // Rebuild the previewed route whenever the waypoints OR the activity change — boats follow the sea,
-  // so switching to/from Boat re-routes the drawn line. Debounced; non-boat is a straight line (no call).
+  // Rebuild the previewed route whenever the waypoints OR the activity change — only boats follow the
+  // sea (a server call); every other activity is a straight line through the waypoints. The sequence
+  // guard drops any in-flight boat fetch that lands after a newer change (e.g. Boat → Bike).
   useEffect(() => {
     if (!building) return;
     const mine = ++previewSeq.current;
+    // Only Boat needs the (debounced) sea-route lookup; every other activity is immediate (delay 0),
+    // so switching *away* from Boat clears the sea path at once instead of lingering for the debounce.
+    const needsSeaRoute = routeActivity === "boat" && routeWaypoints.length >= 2;
     const id = setTimeout(async () => {
       if (routeWaypoints.length < 2) {
         setRoutedPath(null);
@@ -196,7 +212,7 @@ export function TracksWorkspace() {
       } catch {
         if (mine === previewSeq.current) setRoutedPath(routeWaypoints);
       }
-    }, 250);
+    }, needsSeaRoute ? 250 : 0);
     return () => clearTimeout(id);
   }, [building, routeWaypoints, routeActivity]);
 

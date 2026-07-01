@@ -15,7 +15,16 @@ let _db: PostgresJsDatabase<typeof schema> | null = null;
 export function getClient(): Sql {
   // `prepare: false` keeps us compatible with the Supabase transaction-mode pooler (port 6543),
   // which does not support prepared statements. Harmless on local docker / direct connections.
-  _client ??= postgres(env.DATABASE_URL, { prepare: false });
+  //
+  // Serverless pool hygiene: each warm Function instance owns its own pool, so an unbounded `max`
+  // multiplies across instances and exhausts the Postgres/pooler connection ceiling. Cap at one
+  // socket per instance and drop idle sockets so frozen instances don't pin connections.
+  _client ??= postgres(env.DATABASE_URL, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
   return _client;
 }
 

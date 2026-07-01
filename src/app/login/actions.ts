@@ -59,8 +59,11 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
 }
 
 /** OAuth sign-in; the provider id travels in a hidden form field. */
+const OAUTH_PROVIDERS = ["github", "google"] as const;
 export async function signInWithProvider(formData: FormData): Promise<void> {
   const provider = String(formData.get("provider"));
+  // Constrain to the configured providers — never pass an arbitrary client-supplied id to signIn.
+  if (!(OAUTH_PROVIDERS as readonly string[]).includes(provider)) return;
   await signIn(provider, { redirectTo: "/capture" });
 }
 

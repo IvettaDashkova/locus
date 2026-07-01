@@ -23,6 +23,7 @@
     "eval": "tsx src/evals/runner.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "mcp": "tsx packages/locus-mcp/src/server.ts"
   },
   "dependencies": {
@@ -64,6 +65,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

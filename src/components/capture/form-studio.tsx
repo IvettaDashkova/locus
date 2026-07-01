@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/provider";
 import { useAuth } from "@/components/auth/auth-context";
 import { SignInHint } from "@/components/auth/sign-in-hint";
+import { CAPTURE_DEMO } from "@/lib/demo/fixtures";
 
 // Client-only: pulls in maplibre-gl + terra-draw, which touch `window`.
 const FormRenderer = dynamic(() => import("./form-renderer").then((m) => m.FormRenderer), {
@@ -33,8 +35,25 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
 
   const examples = [t("capture.example1"), t("capture.example2")];
 
+  /** Load the pre-built demo form (schema + a filled, validated submission) — no network, no AI budget. */
+  function loadDemo() {
+    setPrompt(CAPTURE_DEMO.prompt);
+    setError(null);
+    setSaveError(null);
+    setGenerated({ jsonSchema: CAPTURE_DEMO.jsonSchema, uiSchema: CAPTURE_DEMO.uiSchema });
+    setFormData(CAPTURE_DEMO.formData);
+    setInspector(JSON.stringify(CAPTURE_DEMO.jsonSchema, null, 2));
+    setInspectorError(null);
+  }
+
   async function generate() {
     if (!prompt.trim()) return;
+    // Generation spends the shared AI budget (sign-in-gated server-side) — prompt signed-out users to
+    // sign in or use the demo, instead of firing a request that just 401s.
+    if (!isLoggedIn) {
+      setError(t("auth.aiRequiresLogin"));
+      return;
+    }
     setLoading(true);
     setError(null);
     setSaveError(null);
@@ -44,6 +63,11 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
+      if (res.status === 401) {
+        setError(t("auth.aiRequiresLogin"));
+        setGenerated(null);
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? t("capture.generateFailed"));
@@ -123,9 +147,15 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
             </button>
           ))}
         </div>
-        <Button onClick={generate} disabled={loading || !prompt.trim()}>
-          {loading ? t("capture.generating") : t("capture.generate")}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={generate} disabled={loading || !prompt.trim()} className="flex-1">
+            {loading ? t("capture.generating") : t("capture.generate")}
+          </Button>
+          <Button variant="secondary" onClick={loadDemo} disabled={loading} className="gap-2">
+            <Play className="size-4" />
+            {t("demo.try")}
+          </Button>
+        </div>
         {error ? (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}

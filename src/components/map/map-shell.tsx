@@ -49,6 +49,17 @@ export function MapShell({ className, onReady }: MapShellProps) {
     });
     mapRef.current = map;
 
+    // MapLibre surfaces every tile fetch that gets aborted — which happens routinely when the map is
+    // torn down and recreated (theme switch, route change, React StrictMode's double-mount in dev) —
+    // as an AJAXError with `status: 0`. These are benign and self-heal on the next render, so keep
+    // them out of the console; only genuine style/source errors get logged. Registering ANY error
+    // listener also stops MapLibre's default `console.error` for these.
+    map.on("error", (e) => {
+      const err = e.error as (Error & { status?: number }) | undefined;
+      if (err?.name === "AbortError" || err?.status === 0) return; // transient tile fetch abort
+      console.error("map error:", err ?? e);
+    });
+
     map.on("moveend", () => {
       viewRef.current = { center: map.getCenter().toArray() as [number, number], zoom: map.getZoom() };
     });

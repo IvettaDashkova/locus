@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -24,12 +25,15 @@ export function UserMenu({ name }: { name: string }) {
         <UserRound className="size-5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{name}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => signOutAction()}>
-          <LogOut className="size-4" />
-          {t("auth.signout")}
-        </DropdownMenuItem>
+        {/* Group so GroupLabel has a group to label (Base UI requires it) — the account section. */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{name}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => signOutAction()}>
+            <LogOut className="size-4" />
+            {t("auth.signout")}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

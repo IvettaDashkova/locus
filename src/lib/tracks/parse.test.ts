@@ -28,6 +28,20 @@ describe("parseGpx", () => {
     expect(t.points).toHaveLength(2);
     expect(t.points[1].ts.getTime()).toBeGreaterThan(t.points[0].ts.getTime());
   });
+
+  it("parses namespace-prefixed tags (e.g. Garmin Connect <gpx:trkpt>)", () => {
+    const ns = `<gpx:gpx><gpx:trk><gpx:name>NS Route</gpx:name><gpx:trkseg>
+      <gpx:trkpt lat="50.45" lon="30.52"><gpx:ele>180</gpx:ele><gpx:time>2026-01-01T00:00:00Z</gpx:time></gpx:trkpt>
+      <gpx:trkpt lat="50.46" lon="30.53"><gpx:ele>190</gpx:ele><gpx:time>2026-01-01T00:01:00Z</gpx:time></gpx:trkpt>
+    </gpx:trkseg></gpx:trk></gpx:gpx>`;
+    const t = parseGpx(ns);
+    expect(t.name).toBe("NS Route");
+    expect(t.points).toHaveLength(2);
+    expect(t.points[0].lat).toBe(50.45);
+    expect(t.points[0].lng).toBe(30.52);
+    expect(t.points[0].elevation).toBe(180);
+    expect(t.points[1].ts.getTime() - t.points[0].ts.getTime()).toBe(60_000);
+  });
 });
 
 describe("parseGeoJson", () => {

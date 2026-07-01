@@ -32,6 +32,19 @@ export function useTrackPlayback(points: TrackPointRow[], playSeconds = 24): Pla
   const t1 = times[times.length - 1] ?? 0;
   const span = Math.max(1, t1 - t0);
 
+  // Reset the playhead whenever the track changes, so a new selection starts from the beginning
+  // rather than inheriting the previous track's scrub position. Keyed on a stable track signature
+  // (not the array identity). Done during render — the React-recommended way to adjust state on a
+  // prop change — which avoids an extra commit and the set-state-in-effect cascade.
+  const trackKey = points.length ? `${points[0].ts}:${points.length}` : "empty";
+  const [prevKey, setPrevKey] = useState(trackKey);
+  if (prevKey !== trackKey) {
+    setPrevKey(trackKey);
+    setProgress(0);
+    setPlaying(false);
+    // progressRef is kept in sync by the mirror effect below once this reset commits.
+  }
+
   // Mirror progress into a ref so the animation loop reads the latest value without re-subscribing.
   useEffect(() => {
     progressRef.current = progress;

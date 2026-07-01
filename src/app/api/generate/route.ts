@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { generateForm } from "@/lib/capture/generate";
-import { recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
+import { reserveAiBudget, markExhausted, isQuotaError } from "@/lib/ai/usage";
+import { requireAuth } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** POST { prompt } → { jsonSchema, uiSchema }. The LLM emits a schema; we Zod-guard, retry once. */
 export async function POST(req: Request) {
+  // AI generation spends the shared daily budget — sign-in required (anonymous visitors use the demo).
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   let body: { prompt?: unknown };
   try {
     body = await req.json();
@@ -17,9 +22,20 @@ export async function POST(req: Request) {
   if (!prompt) {
     return NextResponse.json({ error: "A 'prompt' string is required." }, { status: 400 });
   }
+  if (prompt.length > 2000) {
+    return NextResponse.json({ error: "That prompt is too long." }, { status: 413 });
+  }
 
-  const res = await generateForm(prompt);
-  void recordAiUsage(1); // one generate_content round-trip (generateForm retries once on bad output)
+  // Atomically reserve one round-trip from the daily Gemini free-tier budget before spending it.
+  // Open to everyone, but the reservation is race-safe so concurrent callers can't overshoot quota.
+  if (!(await reserveAiBudget(1))) {
+    return NextResponse.json(
+      { error: "The daily AI budget is spent — it resets at midnight (America/Los_Angeles)." },
+      { status: 429 },
+    );
+  }
+
+  const res = await generateForm(prompt); // the round-trip is already reserved above
   if (!res.ok) {
     if (isQuotaError(res.error)) void markExhausted();
     return NextResponse.json({ error: `Could not generate a valid schema: ${res.error}` }, { status: 422 });

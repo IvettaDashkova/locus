@@ -56,13 +56,18 @@ const OSM_TAGS: Record<string, string> = {
   park: "leisure=park", school: "amenity=school", pharmacy: "amenity=pharmacy", supermarket: "shop=supermarket",
   atm: "amenity=atm", fuel: "amenity=fuel", museum: "tourism=museum", bank: "amenity=bank",
 };
+const placeCategory = z.enum(
+  Object.keys(OSM_TAGS) as [keyof typeof OSM_TAGS, ...(keyof typeof OSM_TAGS)[]],
+);
 const placesInput = z.object({
   lat: z.number(), lng: z.number(),
-  radiusM: z.number().default(1000).describe("search radius in metres"),
-  category: z.string().describe("e.g. cafe, hotel, hospital, park, pharmacy"),
+  radiusM: z.number().int().min(50).max(50_000).default(1000).describe("search radius in metres"),
+  category: placeCategory.describe("one of: cafe, restaurant, hotel, hospital, park, school, pharmacy, supermarket, atm, fuel, museum, bank"),
 });
 async function placesRun({ lat, lng, radiusM, category }: z.infer<typeof placesInput>): Promise<ToolRun> {
-  const tag = OSM_TAGS[category.toLowerCase()] ?? `amenity=${category.toLowerCase()}`;
+  // `category` is constrained to the OSM_TAGS keys, so `tag` is always a trusted literal — no
+  // free-text interpolation reaches the Overpass QL (would otherwise be a query-injection vector).
+  const tag = OSM_TAGS[category];
   const ql = `[out:json][timeout:25];node(around:${radiusM},${lat},${lng})[${tag}];out 15;`;
   const r = await cached(`places:${tag}:${lat.toFixed(3)}:${lng.toFixed(3)}:${radiusM}`, 3_600_000, () =>
     fetchJson("https://overpass-api.de/api/interpreter", { method: "POST", body: `data=${encodeURIComponent(ql)}` }),
@@ -79,14 +84,19 @@ async function placesRun({ lat, lng, radiusM, category }: z.infer<typeof placesI
 // ── route (OpenRouteService) ─────────────────────────────────────────────────
 const profile = z.enum(["driving-car", "foot-walking", "cycling-regular"]).default("driving-car");
 const routeInput = z.object({
-  from: z.array(z.number()).describe("[lng, lat] start"),
-  to: z.array(z.number()).describe("[lng, lat] end"),
+  // A 2-number [lng, lat] array, NOT z.tuple: tuples serialize to `items: [ … ]` (a list), which
+  // Gemini's function-declaration schema rejects ("Proto field is not repeating") — it wants `items`
+  // to be a single schema. `.length(2)` keeps the two-element contract.
+  from: z.array(z.number()).length(2).describe("[lng, lat] start"),
+  to: z.array(z.number()).length(2).describe("[lng, lat] end"),
   profile,
 });
 async function routeRun({ from, to, profile }: z.infer<typeof routeInput>): Promise<ToolRun> {
   if (!ORS_KEY) return { summary: "Routing needs ORS_API_KEY.", data: { error: "no_key" }, features: [] };
-  const url = `https://api.openrouteservice.org/v2/directions/${profile}?api_key=${ORS_KEY}&start=${from[0]},${from[1]}&end=${to[0]},${to[1]}`;
-  const r = await fetchJson(url);
+  // Key goes in the Authorization header, never the URL — a URL-embedded key leaks into thrown error
+  // messages (`fetchJson` strips the query, but other layers may not), logs, and traces.
+  const url = `https://api.openrouteservice.org/v2/directions/${profile}?start=${from[0]},${from[1]}&end=${to[0]},${to[1]}`;
+  const r = await fetchJson(url, { headers: { Authorization: ORS_KEY } });
   const f = (r.features as GeoJSON.Feature[] | undefined)?.[0];
   const summary = (f?.properties as { summary?: { distance: number; duration: number } })?.summary;
   const km = summary ? (summary.distance / 1000).toFixed(1) : "?";

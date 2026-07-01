@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Send, X, Wrench } from "lucide-react";
+import { Send, X, Wrench, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useI18n } from "@/lib/i18n/provider";
+import { useAuth } from "@/components/auth/auth-context";
+import { SignInHint } from "@/components/auth/sign-in-hint";
+import { ACT_DEMO } from "@/lib/demo/fixtures";
 
 type Message = { role: "user" | "assistant"; content: string; tools: string[] };
 
@@ -18,6 +21,7 @@ export function ActChat({
   onClose?: () => void;
 }) {
   const { t } = useI18n();
+  const { isLoggedIn } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,8 +35,26 @@ export function ActChat({
     });
   }
 
+  /** Load the pre-recorded agent run (text, tool tags, map features) — no network, no AI budget. */
+  function loadDemo() {
+    onReset();
+    setMessages([
+      { role: "user", content: ACT_DEMO.task, tools: [] },
+      { role: "assistant", content: ACT_DEMO.text, tools: ACT_DEMO.tools },
+    ]);
+    onFeatures(ACT_DEMO.features);
+    scrollBottom.current?.scrollIntoView({ behavior: "auto" });
+  }
+
   async function run(task: string) {
     if (!task.trim() || busy) return;
+    // The live agent spends the shared AI budget (sign-in-gated server-side) — point signed-out users
+    // at the demo rather than firing a request that just 401s.
+    if (!isLoggedIn) {
+      setMessages((m) => [...m, { role: "user", content: task, tools: [] }, { role: "assistant", content: t("auth.aiRequiresLogin"), tools: [] }]);
+      setInput("");
+      return;
+    }
     setBusy(true);
     setInput("");
     onReset();
@@ -43,6 +65,10 @@ export function ActChat({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ task }),
       });
+      if (res.status === 401) {
+        patchLast((m) => ({ ...m, content: t("auth.aiRequiresLogin") }));
+        return;
+      }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let buf = "";
@@ -102,6 +128,11 @@ export function ActChat({
                   </button>
                 ))}
               </div>
+              <Button variant="secondary" onClick={loadDemo} className="w-full gap-2">
+                <Play className="size-4" />
+                {t("demo.try")}
+              </Button>
+              {!isLoggedIn ? <SignInHint callbackUrl="/act" /> : null}
             </div>
           ) : null}
 

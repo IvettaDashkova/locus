@@ -25,19 +25,21 @@ const num = (s: string | undefined | null) => {
  * (no XML lib) and is enough for the GPX exported by Strava/Garmin/phones.
  */
 export function parseGpx(xml: string): ParsedTrack {
-  const nameMatch = xml.match(/<name>([^<]*)<\/name>/i);
+  // `(?:\w+:)?` tolerates namespace-prefixed tags (`<gpx:name>`, `<ns3:trkpt>`) that Garmin Connect,
+  // SwissTopo and others emit — without it those exports parsed to zero points.
+  const nameMatch = xml.match(/<(?:\w+:)?name>([^<]*)<\/(?:\w+:)?name>/i);
   const name = nameMatch?.[1]?.trim() || "Imported GPX track";
 
   const points: { lng: number; lat: number; elevation: number | null; ts: Date | null }[] = [];
-  const trkptRe = /<trkpt\b[^>]*\blat=["']([^"']+)["'][^>]*\blon=["']([^"']+)["'][^>]*>([\s\S]*?)<\/trkpt>|<trkpt\b[^>]*\blat=["']([^"']+)["'][^>]*\blon=["']([^"']+)["'][^>]*\/>/gi;
+  const trkptRe = /<(?:\w+:)?trkpt\b[^>]*\blat=["']([^"']+)["'][^>]*\blon=["']([^"']+)["'][^>]*>([\s\S]*?)<\/(?:\w+:)?trkpt>|<(?:\w+:)?trkpt\b[^>]*\blat=["']([^"']+)["'][^>]*\blon=["']([^"']+)["'][^>]*\/>/gi;
   let m: RegExpExecArray | null;
   while ((m = trkptRe.exec(xml))) {
     const lat = num(m[1] ?? m[4]);
     const lng = num(m[2] ?? m[5]);
     if (lat == null || lng == null) continue;
     const inner = m[3] ?? "";
-    const ele = num(inner.match(/<ele>([^<]*)<\/ele>/i)?.[1]);
-    const time = inner.match(/<time>([^<]*)<\/time>/i)?.[1];
+    const ele = num(inner.match(/<(?:\w+:)?ele>([^<]*)<\/(?:\w+:)?ele>/i)?.[1]);
+    const time = inner.match(/<(?:\w+:)?time>([^<]*)<\/(?:\w+:)?time>/i)?.[1];
     const ts = time ? new Date(time) : null;
     points.push({ lng, lat, elevation: ele, ts: ts && !Number.isNaN(ts.getTime()) ? ts : null });
   }

@@ -1,10 +1,13 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
-import { Send, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Send, X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useI18n } from "@/lib/i18n/provider";
+import { useAuth } from "@/components/auth/auth-context";
+import { SignInHint } from "@/components/auth/sign-in-hint";
+import { ASK_DEMO } from "@/lib/demo/fixtures";
 import type { AskSource } from "./ask-pins-layer";
 
 type Message = { role: "user" | "assistant"; content: string; sources?: AskSource[] };
@@ -25,22 +28,56 @@ function renderWithCitations(text: string): ReactNode[] {
 
 export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) => void; onClose?: () => void }) {
   const { t } = useI18n();
+  const { isLoggedIn } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const scrollBottom = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Abort any in-flight request when the component unmounts, so a closed stream can't keep reading
+  // and setState on an unmounted component.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  /** Load the pre-recorded demo answer + its map pins — no network, no AI budget, works signed-out. */
+  function loadDemo() {
+    setMessages([
+      { role: "user", content: ASK_DEMO.question },
+      { role: "assistant", content: ASK_DEMO.answer, sources: ASK_DEMO.sources },
+    ]);
+    onSources(ASK_DEMO.sources);
+    scrollBottom.current?.scrollIntoView({ behavior: "auto" });
+  }
 
   async function ask(question: string) {
     if (!question.trim() || busy) return;
+    // Live Ask spends the shared AI budget, so it's sign-in-gated server-side. Guide signed-out users
+    // to the demo instead of firing a request that would just 401.
+    if (!isLoggedIn) {
+      setMessages((m) => [...m, { role: "user", content: question }, { role: "assistant", content: t("auth.aiRequiresLogin") }]);
+      return;
+    }
     setBusy(true);
     setInput("");
     setMessages((m) => [...m, { role: "user", content: question }, { role: "assistant", content: "" }]);
+    abortRef.current?.abort(); // cancel a previous run before starting a new one
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ question }),
+        signal: ctrl.signal,
       });
+      if (res.status === 401) {
+        setMessages((m) => {
+          const next = [...m];
+          next[next.length - 1] = { role: "assistant", content: t("auth.aiRequiresLogin") };
+          return next;
+        });
+        return;
+      }
       let sources: AskSource[] = [];
       const header = res.headers.get("x-locus-sources");
       if (header) {
@@ -66,7 +103,8 @@ export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) =>
             next[next.length - 1] = { role: "assistant", content: acc };
             return next;
           });
-          scrollBottom.current?.scrollIntoView({ behavior: "smooth" });
+          // Instant scroll: a smooth animation restarted on every token stutters and forces reflow.
+          scrollBottom.current?.scrollIntoView({ behavior: "auto" });
         }
       }
 
@@ -80,6 +118,7 @@ export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) =>
         return next;
       });
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return; // superseded/unmounted — ignore
       setMessages((m) => {
         const next = [...m];
         next[next.length - 1] = { role: "assistant", content: String(e) };
@@ -121,6 +160,11 @@ export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) =>
                   </button>
                 ))}
               </div>
+              <Button variant="secondary" onClick={loadDemo} className="w-full gap-2">
+                <Play className="size-4" />
+                {t("demo.try")}
+              </Button>
+              {!isLoggedIn ? <SignInHint callbackUrl="/ask" /> : null}
             </div>
           ) : null}
 

@@ -18,9 +18,8 @@ export async function GET() {
       vector: names.includes("vector"),
     });
   } catch (error) {
-    return NextResponse.json(
-      { db: "error", message: error instanceof Error ? error.message : String(error) },
-      { status: 500 },
-    );
+    // Report unhealthy without echoing the raw driver error (it can carry the connection string).
+    console.error("health check failed", error);
+    return NextResponse.json({ db: "error" }, { status: 500 });
   }
 }

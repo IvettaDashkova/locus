@@ -28,8 +28,11 @@ function MiniChart({
     const px = (i: number) => (xs[i] / xMax) * 100;
     const py = (v: number) => 100 - ((v - yMin) / yRange) * 92 - 4; // 4% padding top/bottom
 
+    // Downsample to ~300 path points: a multi-hour GPS track can hold tens of thousands of fixes,
+    // and one SVG command per fix produces a huge `d` string the browser re-lays-out on every render.
+    const step = Math.max(1, Math.ceil(ys.length / 300));
     const pts: string[] = [];
-    for (let i = 0; i < ys.length; i++) {
+    for (let i = 0; i < ys.length; i += step) {
       const v = ys[i];
       if (v == null) continue;
       pts.push(`${px(i).toFixed(2)},${py(v).toFixed(2)}`);
@@ -106,6 +109,10 @@ export function TrackCharts({
     return trackProfile(fixes);
   }, [points]);
 
+  // Stable identity for the km/h series — recomputing it inline every render busts MiniChart's memo,
+  // which matters because the playback cursor re-renders TrackCharts ~60×/s.
+  const speedKmh = useMemo(() => profile.speedMps.map((v) => v * 3.6), [profile]);
+
   if (points.length < 2) return null;
   const total = profile.cumulativeM[profile.cumulativeM.length - 1] || 1;
   const cursorFrac = profile.cumulativeM[pointIndex] != null ? profile.cumulativeM[pointIndex] / total : null;
@@ -125,7 +132,7 @@ export function TrackCharts({
       ) : null}
       <div>
         <p className="mb-1 text-xs font-medium text-muted-foreground">{t("tracks.chart.speed")}</p>
-        <MiniChart x={profile.cumulativeM} y={profile.speedMps.map((v) => v * 3.6)} color="#6d4aff" cursorFrac={cursorFrac} />
+        <MiniChart x={profile.cumulativeM} y={speedKmh} color="#6d4aff" cursorFrac={cursorFrac} />
       </div>
       <div>
         <p className="mb-1 text-xs font-medium text-muted-foreground">{t("tracks.chart.dwell")}</p>

@@ -22,6 +22,31 @@ function today(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date());
 }
 
+/**
+ * Atomically reserve `calls` against today's budget *before* spending them. Returns true if the
+ * reservation fit under `DAILY_LIMIT` (caller may proceed), false if it would exceed it (caller
+ * should 429). This closes the TOCTOU race in the old read-then-write flow, where concurrent
+ * requests could all observe `remaining > 0` and overshoot Google's real quota: the `WHERE` guard on
+ * the upsert makes the check-and-increment a single atomic statement. Fails *open* (returns true) on
+ * an infra error — accounting must never hard-block a request — matching `recordAiUsage`'s contract.
+ */
+export async function reserveAiBudget(calls = 1): Promise<boolean> {
+  if (calls <= 0) return true;
+  try {
+    await ensureTable();
+    const day = today();
+    const rows = await getClient()<{ count: number }[]>`
+      INSERT INTO ai_usage (day, count) VALUES (${day}, ${calls})
+      ON CONFLICT (day) DO UPDATE SET count = ai_usage.count + ${calls}
+        WHERE ai_usage.count + ${calls} <= ${DAILY_LIMIT}
+      RETURNING count
+    `;
+    return rows.length > 0;
+  } catch {
+    return true; // fail open — never block a request on an accounting error
+  }
+}
+
 /** Add `calls` model round-trips to today's tally. Never throws — usage accounting must not break a request. */
 export async function recordAiUsage(calls = 1): Promise<void> {
   if (calls <= 0) return;
