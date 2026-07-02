@@ -10,6 +10,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UsageBadge } from "@/components/usage/usage-badge";
 import { UserMenu } from "@/components/auth/user-menu";
+import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { OnboardingTour, START_TOUR_EVENT } from "@/components/onboarding/onboarding-tour";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -54,6 +55,7 @@ export function AppShell({ children, userName }: { children: React.ReactNode; us
           >
             <HelpCircle className="size-5" />
           </Button>
+          <FeedbackDialog variant="ghost" size="icon" iconOnly />
           <ThemeToggle />
           <LanguageSwitcher />
           {userName ? (

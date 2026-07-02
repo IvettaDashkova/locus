@@ -48,3 +48,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# personal (not for the repo)
+IvettaDashkova_Resume.pdf

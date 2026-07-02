@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, MessagesSquare, Workflow, Route, type LucideIcon } from "lucide-react";
+import { ClipboardList, MessagesSquare, Workflow, Route, FlaskConical, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -13,6 +13,7 @@ const ITEMS: NavItem[] = [
   { href: "/ask", icon: MessagesSquare, key: "ask" },
   { href: "/act", icon: Workflow, key: "act" },
   { href: "/tracks", icon: Route, key: "tracks" },
+  { href: "/lab", icon: FlaskConical, key: "lab" },
 ];
 
 export function ModuleNav({ onNavigate }: { onNavigate?: () => void } = {}) {
