@@ -15,7 +15,7 @@ import { useI18n } from "@/lib/i18n/provider";
 const APP_URL = "https://locus-dun.vercel.app/capture";
 const SOURCE_URL = "https://github.com/IvettaDashkova/locus";
 const PORTFOLIO_URL = "https://portfolio.ivettadashkova.com/";
-const CV_URL = "https://portfolio.ivettadashkova.com/IvettaDashkova_Resume.pdf";
+const CV_URL = "/api/cv"; // same-origin proxy → forces a real download (see src/app/api/cv/route.ts)
 const LINKEDIN_URL = "https://linkedin.com/in/ivettadashkova";
 
 const MODULES: { icon: LucideIcon; key: string }[] = [
@@ -97,7 +97,7 @@ export function LandingPage() {
                 size="lg"
                 variant="outline"
                 nativeButton={false}
-                render={<a href={CV_URL} target="_blank" rel="noreferrer" download />}
+                render={<a href={CV_URL} download="IvettaDashkova_Resume.pdf" />}
                 className="gap-2"
               >
                 <Download className="size-4" />
