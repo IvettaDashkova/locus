@@ -1,12 +1,26 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, MessagesSquare, Workflow, Route, FlaskConical, type LucideIcon } from "lucide-react";
+import { ClipboardList, MessagesSquare, Workflow, Route, FlaskConical, Loader2, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/provider";
 
 type NavItem = { href: string; icon: LucideIcon; key: string };
+
+/**
+ * The nav item's icon, which becomes a spinner while its link is mid-navigation. `useLinkStatus`
+ * (Next.js) reports the pending state of the nearest ancestor <Link>, giving instant "loading between
+ * pages" feedback without a global router or extra state.
+ */
+function NavIcon({ Icon }: { Icon: LucideIcon }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <Loader2 className="size-4 shrink-0 animate-spin" />
+  ) : (
+    <Icon className="size-4 shrink-0" />
+  );
+}
 
 const ITEMS: NavItem[] = [
   { href: "/capture", icon: ClipboardList, key: "capture" },
@@ -38,7 +52,7 @@ export function ModuleNav({ onNavigate }: { onNavigate?: () => void } = {}) {
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
             )}
           >
-            <Icon className="size-4 shrink-0" />
+            <NavIcon Icon={Icon} />
             <span>{label}</span>
           </Link>
         );

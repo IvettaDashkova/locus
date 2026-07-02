@@ -5,6 +5,7 @@ import { customizeValidator } from "@rjsf/validator-ajv8";
 import Ajv2020 from "ajv/dist/2020";
 import type { RegistryFieldsType, RJSFSchema, UiSchema } from "@rjsf/utils";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/provider";
 import { GeoPointField } from "./geo-point-field";
 import { GeoPolygonField } from "./geo-polygon-field";
 
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function FormRenderer({ schema, uiSchema, formData, onChange, onSubmit, submitting }: Props) {
+  const { t } = useI18n();
   return (
     <div className="locus-form">
       <Form
@@ -44,7 +46,7 @@ export function FormRenderer({ schema, uiSchema, formData, onChange, onSubmit, s
       >
         <div className="mt-4">
           <Button type="submit" disabled={submitting} className="w-full">
-            {submitting ? "Saving…" : "Save submission"}
+            {submitting ? t("capture.saving") : t("capture.save")}
           </Button>
         </div>
       </Form>

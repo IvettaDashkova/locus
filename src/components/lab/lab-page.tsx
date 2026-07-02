@@ -18,7 +18,7 @@ import { ClusteringDemo } from "./demos/clustering-demo";
 export function LabPage() {
   const { t } = useI18n();
   return (
-    <div className="pointer-events-auto absolute inset-0 overflow-y-auto bg-background">
+    <div className="pointer-events-auto absolute inset-0 z-20 overflow-y-auto bg-background">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <header className="mb-6 flex items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

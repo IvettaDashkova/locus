@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Route, Upload, X, Play, Pause, Footprints, Mountain, Bike, Car, Sailboat,
   Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2, MousePointerClick,
-  PanelRightOpen, Pencil,
+  PanelRightOpen, Pencil, ArrowUp, ArrowDown, GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -221,6 +221,20 @@ export function TracksWorkspace() {
     if (fly && map) map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 12), duration: 700 });
   }, [map]);
 
+  // Reorder a waypoint by one slot (the route preview re-runs off routeWaypoints), or drop it.
+  const moveWaypoint = useCallback((i: number, dir: -1 | 1) => {
+    setRouteWaypoints((w) => {
+      const j = i + dir;
+      if (j < 0 || j >= w.length) return w;
+      const next = [...w];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }, []);
+  const removeWaypoint = useCallback((i: number) => {
+    setRouteWaypoints((w) => w.filter((_, idx) => idx !== i));
+  }, []);
+
   function startBuild() {
     setSelected(null);
     setEditing(false);
@@ -392,11 +406,13 @@ export function TracksWorkspace() {
             </Button>
             <Button
               onClick={() => setShowHeatmap((v) => !v)}
-              variant={showHeatmap ? "secondary" : "outline"}
-              className="gap-2 shadow-lg"
+              variant={showHeatmap ? "default" : "outline"}
+              aria-pressed={showHeatmap}
+              className={cn("gap-2 shadow-lg", showHeatmap && "ring-2 ring-primary/40")}
             >
               <Layers className="size-4" />
               {t("tracks.heatmap")}
+              {showHeatmap ? <Check className="size-3.5" /> : null}
             </Button>
           </div>
           {!isLoggedIn ? <div className="max-w-xs"><SignInHint callbackUrl="/tracks" /></div> : null}
@@ -506,6 +522,58 @@ export function TracksWorkspace() {
                     </Button>
                   </div>
                 </div>
+
+                {routeWaypoints.length ? (
+                  <ol className="max-h-56 space-y-1 overflow-y-auto">
+                    {routeWaypoints.map((wp, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-1.5 rounded-md border bg-background/60 px-2 py-1.5"
+                      >
+                        <GripVertical className="size-3.5 shrink-0 text-muted-foreground/50" />
+                        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary tabular-nums">
+                          {i + 1}
+                        </span>
+                        <span className="flex-1 truncate text-xs tabular-nums text-muted-foreground">
+                          {wp[1].toFixed(4)}, {wp[0].toFixed(4)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={i === 0}
+                          onClick={() => moveWaypoint(i, -1)}
+                          aria-label={t("tracks.build.moveUp")}
+                          title={t("tracks.build.moveUp")}
+                        >
+                          <ArrowUp className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          disabled={i === routeWaypoints.length - 1}
+                          onClick={() => moveWaypoint(i, 1)}
+                          aria-label={t("tracks.build.moveDown")}
+                          title={t("tracks.build.moveDown")}
+                        >
+                          <ArrowDown className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => removeWaypoint(i)}
+                          aria-label={t("tracks.build.removePoint")}
+                          title={t("tracks.build.removePoint")}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="rounded-md border border-dashed px-3 py-2 text-center text-xs text-muted-foreground">
+                    {t("tracks.build.emptyPoints")}
+                  </p>
+                )}
 
                 {error ? <p className="text-sm text-destructive">⚠ {error}</p> : null}
                 {!isLoggedIn ? <SignInHint callbackUrl="/tracks" /> : null}

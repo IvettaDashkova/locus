@@ -35,7 +35,7 @@ export function SubmissionDetail({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{item.siteName ?? item.formName}</DialogTitle>
           <DialogDescription>
@@ -52,7 +52,7 @@ export function SubmissionDetail({
 
         <div>
           <div className="mb-1 text-xs font-medium text-muted-foreground">{t("detail.data")}</div>
-          <pre className="max-h-64 overflow-auto rounded-md border bg-muted/30 p-3 text-xs leading-relaxed">
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-muted/30 p-3 text-xs leading-relaxed">
             {JSON.stringify(item.data, null, 2)}
           </pre>
         </div>

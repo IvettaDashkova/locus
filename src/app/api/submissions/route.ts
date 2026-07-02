@@ -125,7 +125,7 @@ export async function POST(req: Request) {
     const result = await sql.begin(async (tx) => {
       const [form] = await tx<{ id: string }[]>`
         INSERT INTO forms (name, json_schema, ui_schema)
-        VALUES (${formName}, ${JSON.stringify(jsonSchema)}::jsonb, ${JSON.stringify(uiSchema ?? {})}::jsonb)
+        VALUES (${formName}, ${sql.json(jsonSchema as never)}, ${sql.json((uiSchema ?? {}) as never)})
         RETURNING id
       `;
 
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
         : tx`NULL`;
       const [submission] = await tx<{ id: string }[]>`
         INSERT INTO submissions (form_id, site_id, data, geom)
-        VALUES (${form.id}, ${siteId}, ${JSON.stringify(data)}::jsonb, ${geom})
+        VALUES (${form.id}, ${siteId}, ${sql.json(data as never)}, ${geom})
         RETURNING id
       `;
 

@@ -6,7 +6,11 @@ import { computeTrackMetrics, type Fix } from "./metrics";
  * Pass timestamps to postgres as ISO strings (cast `::timestamptz`) rather than Date objects.
  * When this module is bundled alongside the Auth.js instance (the write routes import both), the
  * `postgres` driver can end up duplicated, breaking its `instanceof Date` serialization. Plain
- * strings sidestep that entirely. Same reason JSON goes in as `JSON.stringify(...)::jsonb`.
+ * strings sidestep that entirely.
+ *
+ * JSON goes in via `sql.json(...)`, NOT `JSON.stringify(...)::jsonb`: with `prepare:false` (Supabase
+ * pooler) the latter is sent as a jsonb *string* (double-encoded), so `jsonb_array_elements` on it
+ * throws "cannot extract elements from a scalar". `sql.json` encodes a real jsonb array/object.
  */
 const iso = (d: Date | string | number) => new Date(d).toISOString();
 
@@ -46,7 +50,7 @@ export async function insertTrack(sql: Sql, input: TrackInput): Promise<StoredTr
       INSERT INTO tracks (name, description, activity, source, site_id, user_id, started_at, ended_at, metrics)
       VALUES (
         ${input.name}, ${input.description ?? null}, ${input.activity ?? null}, ${input.source},
-        ${input.siteId ?? null}, ${input.userId ?? null}, ${iso(startedAt)}::timestamptz, ${iso(endedAt)}::timestamptz, ${JSON.stringify(metrics)}::jsonb
+        ${input.siteId ?? null}, ${input.userId ?? null}, ${iso(startedAt)}::timestamptz, ${iso(endedAt)}::timestamptz, ${sql.json(metrics as never)}
       )
       RETURNING id
     `;
@@ -66,7 +70,7 @@ export async function insertTrack(sql: Sql, input: TrackInput): Promise<StoredTr
       SELECT ${trackId}, (r->>'seq')::int, (r->>'ts')::timestamptz,
              ST_SetSRID(ST_MakePoint((r->>'lng')::float8, (r->>'lat')::float8), 4326)::geography,
              (r->>'ele')::float8, (r->>'speed')::float8
-      FROM jsonb_array_elements(${JSON.stringify(rows)}::jsonb) AS r
+      FROM jsonb_array_elements(${sql.json(rows)}) AS r
     `;
 
     // Simplified path for rendering (Douglas–Peucker, ~5 m tolerance in degrees).
