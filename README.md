@@ -5,7 +5,8 @@
 > A geospatial workspace to **capture, ask, act on, and analyze** location data.
 > One Next.js + **Postgres (PostGIS + pgvector)** app with four capabilities built as layered
 > modules: schema-driven geo forms, a geospatial RAG assistant, an agent with map tools (MCP),
-> and trajectory analytics.
+> and trajectory analytics — plus a live **Navigation Lab** demonstrating the map/navigation bugs
+> that bite every location app, and their fixes.
 
 **Live demo:** https://locus-dun.vercel.app · **Stack:** Next.js (App Router) · TypeScript · Postgres + PostGIS + pgvector (Supabase) · Drizzle · Auth.js · Vercel AI SDK (Gemini free / Ollama, provider-agnostic) · embeddings via the AI SDK (Gemini `gemini-embedding-001`, 768-d) · MapLibre + OpenFreeMap · Turf.js · zero-dependency SVG charts · OpenAPI/Swagger
 
@@ -34,6 +35,14 @@ doesn't care whether you're tracking storefronts, inspections, deliveries or tra
 | **Ask** | A geospatial RAG assistant over your data + open sources — cited answers *and* a map of mentioned places. | RAG, pgvector, hybrid search (RRF fusion), grounding gate, evals |
 | **Act** | An agent with geo tools (geocode, route, isochrone, nearby, weather) exposed over **MCP** and used in-app. | MCP server, agent orchestration, tool-calling, observability |
 | **Tracks** | Import GPS trajectories, compute movement metrics, play them back, and get an AI briefing. | PostGIS geography analytics, stay-point stop detection, animated MapLibre playback + density heatmap, grounded LLM |
+
+**Plus — [Navigation Lab](https://locus-dun.vercel.app/lab) (`/lab`):** seven common map & navigation
+bugs shown live and in plain language, each paired with its fix and its business impact — GPS
+jitter smoothing (moving-average / EMA / 1-D Kalman), coordinate-order (lat/lng) mistakes, the
+antimeridian, distance accuracy (haversine vs flat), track simplification (Douglas–Peucker), marker
+clustering, and shareable map state (viewport in the URL). Every visual is a self-contained,
+offline SVG mini-map; the underlying geometry is pure and unit-tested. Written HR-first, so a
+non-technical reader sees why each bug matters to the product.
 
 ## Screenshots
 
@@ -116,7 +125,9 @@ Two complementary layers:
 
 - **Unit tests** (`npm test`, Vitest) cover the pure logic — trajectory metrics, stay-point stop
   detection, elevation hysteresis, GPX/GeoJSON parsing, the synthetic-track generator, activity
-  presets, and marine routing — with hand-calculated worked examples. Fast, deterministic, no DB.
+  presets, marine routing, and the Navigation Lab geometry (GPS smoothing, Douglas–Peucker,
+  antimeridian split/unwrap, haversine vs planar distance, Web Mercator projection, grid clustering)
+  — with hand-calculated worked examples. Fast, deterministic, no DB.
 - **Eval harness** (`npm run eval`) exercises each module end-to-end (some steps hit the LLM):
 
 | Module | Key metrics |
@@ -153,6 +164,7 @@ Every module is backed by a small HTTP API documented with **OpenAPI 3.0** and b
 | `/api/tracks/heatmap` | GET | Density-heatmap points (GeoJSON) — public |
 | `/api/tracks/build` | POST | Build a track from a drawn route, boats routed by sea · **sign-in** |
 | `/api/tracks/route-preview` | POST | Preview a route's geometry for an activity · **sign-in** |
+| `/api/feedback` | POST | Send a suggestion/remark from the feedback form — emailed to the site owner (public) |
 
 GET reads stay public so the map and seeded data are browsable; every budget-spending or mutating
 route returns `401 {"error":"auth_required"}` when called without a session.
@@ -182,6 +194,7 @@ npm run eval                          # cross-module eval suite
 - ✅ **Phase 2 — Ask:** ingestion, hybrid + spatial retrieval, cited streaming answers + map. *Live.*
 - ✅ **Phase 3 — Act:** Locus MCP server (geo tools) + in-app agent with Langfuse tracing. *Live.*
 - ✅ **Phase 4 — Tracks:** GPX/GeoJSON import, PostGIS geography metrics + stay-point stop detection, animated MapLibre playback + density heatmap, custom SVG profiles, grounded "explain this trip." *Live.*
+- ✅ **Portfolio front door:** signed-out landing page, the **Navigation Lab** (common map bugs + fixes, business-framed), and an email feedback form. *Live.*
 
 Each phase is independently demoable, so there's always something live: **https://locus-dun.vercel.app**
 
@@ -251,10 +264,15 @@ min-dwell gate. Seed synthetic tracks with `npm run seed:tracks`.
 
 What a user can actually do, module by module — and exactly where the sign-in line falls.
 
+**Landing (`/`, signed-out).** The front door: a short intro (who I am, what Locus is), a link into
+the app, links to the source, portfolio and CV, and a **feedback** form. Signed-in users skip
+straight to the first module.
+
 **Top bar (every module).** A live **AI budget** badge shows how many free-tier model calls remain
-today (e.g. `AI 20/20`), a theme toggle, a language switcher (English · Українська · Polski, auto-
-detected and persisted), an onboarding tour, and **Sign in**. The left rail switches modules; the
-map underneath is shared, so results from any module render on the same canvas.
+today (e.g. `AI 20/20`), a **feedback** button (suggestions are emailed to the owner via
+`/api/feedback`), a theme toggle, a language switcher (English · Українська · Polski, auto-detected
+and persisted), an onboarding tour, and **Sign in**. The left rail switches modules (Capture · Ask ·
+Act · Tracks · **Lab**); the map underneath is shared, so results from any module render on the same canvas.
 
 **Capture — design a form, then fill it.**
 1. Click **New form** and describe the form in plain English (e.g. *"a field survey: site name, the

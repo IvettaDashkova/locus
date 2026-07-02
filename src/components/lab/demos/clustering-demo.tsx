@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { scatterPoints } from "@/lib/lab/fixtures";
 import { gridCluster } from "@/lib/lab/cluster";
 import { fitProjection } from "@/lib/lab/projection";
-import { DemoCard, Insight, Metric, Segmented, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, Segmented, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 export function ClusteringDemo({ index }: { index: number }) {
@@ -69,6 +69,7 @@ export function ClusteringDemo({ index }: { index: number }) {
       ) : (
         <Insight tone="solution">{t("lab.cluster.fix")}</Insight>
       )}
+      <Impact>{t("lab.cluster.impact")}</Impact>
     </DemoCard>
   );
 }

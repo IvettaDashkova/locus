@@ -7,7 +7,7 @@ import { noisyWalk } from "@/lib/lab/fixtures";
 import { movingAverage, ema, kalmanSmooth, pathLengthM } from "@/lib/lab/smooth";
 import { fitProjection } from "@/lib/lab/projection";
 import type { LngLat } from "@/lib/lab/types";
-import { DemoCard, Insight, Metric, Segmented, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, Segmented, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 type Mode = "raw" | "avg" | "ema" | "kalman";
@@ -94,6 +94,7 @@ export function GpsJitterDemo({ index }: { index: number }) {
       ) : (
         <Insight tone="solution">{t("lab.jitter.fix")}</Insight>
       )}
+      <Impact>{t("lab.jitter.impact")}</Impact>
     </DemoCard>
   );
 }

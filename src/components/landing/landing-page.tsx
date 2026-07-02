@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  MapPin, ArrowRight, Code2, ExternalLink, FlaskConical, ClipboardList,
+  MapPin, ArrowRight, Code2, ExternalLink, Download, Globe, FlaskConical, ClipboardList,
   MessagesSquare, Workflow, Route, type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,9 @@ import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { useI18n } from "@/lib/i18n/provider";
 
 const APP_URL = "https://locus-dun.vercel.app/capture";
-const GITHUB_URL = "https://github.com/IvettaDashkova";
+const SOURCE_URL = "https://github.com/IvettaDashkova/locus";
+const PORTFOLIO_URL = "https://portfolio.ivettadashkova.com/";
+const CV_URL = "https://portfolio.ivettadashkova.com/IvettaDashkova_Resume.pdf";
 const LINKEDIN_URL = "https://linkedin.com/in/ivettadashkova";
 
 const MODULES: { icon: LucideIcon; key: string }[] = [
@@ -91,12 +93,25 @@ export function LandingPage() {
                 {t("landing.cta")}
                 <ArrowRight className="size-4" />
               </Button>
-              <FeedbackDialog variant="outline" size="lg" triggerLabel={t("landing.feedbackCta")} />
+              <Button
+                size="lg"
+                variant="outline"
+                nativeButton={false}
+                render={<a href={CV_URL} target="_blank" rel="noreferrer" download />}
+                className="gap-2"
+              >
+                <Download className="size-4" />
+                {t("landing.downloadCv")}
+              </Button>
+              <FeedbackDialog variant="ghost" size="lg" triggerLabel={t("landing.feedbackCta")} />
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
-                <Code2 className="size-4" /> GitHub
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <a href={PORTFOLIO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
+                <Globe className="size-4" /> {t("landing.portfolio")}
+              </a>
+              <a href={SOURCE_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
+                <Code2 className="size-4" /> {t("landing.sourceCode")}
               </a>
               <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground">
                 <ExternalLink className="size-4" /> LinkedIn

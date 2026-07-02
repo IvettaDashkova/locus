@@ -7,7 +7,7 @@ import { worldToXY } from "@/lib/lab/projection";
 import { splitAntimeridian } from "@/lib/lab/antimeridian";
 import { haversineM } from "@/lib/lab/distance";
 import { CITIES } from "@/lib/lab/fixtures";
-import { DemoCard, Insight, Metric, Segmented, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, Segmented, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 const W = 760;
@@ -73,6 +73,7 @@ export function AntimeridianDemo({ index }: { index: number }) {
       ) : (
         <Insight tone="solution">{t("lab.anti.fix")}</Insight>
       )}
+      <Impact>{t("lab.anti.impact")}</Impact>
     </DemoCard>
   );
 }

@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { heavyTrail } from "@/lib/lab/fixtures";
 import { simplify } from "@/lib/lab/simplify";
 import { fitProjection } from "@/lib/lab/projection";
-import { DemoCard, Insight, Metric, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 export function SimplifyDemo({ index }: { index: number }) {
@@ -49,6 +49,7 @@ export function SimplifyDemo({ index }: { index: number }) {
       </div>
 
       <Insight tone="solution">{t("lab.simplify.fix")}</Insight>
+      <Impact>{t("lab.simplify.impact")}</Impact>
     </DemoCard>
   );
 }

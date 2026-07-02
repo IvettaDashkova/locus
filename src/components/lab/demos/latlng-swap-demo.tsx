@@ -7,7 +7,7 @@ import { worldToXY } from "@/lib/lab/projection";
 import { haversineM } from "@/lib/lab/distance";
 import { CITIES } from "@/lib/lab/fixtures";
 import type { LngLat } from "@/lib/lab/types";
-import { DemoCard, Insight, Metric, Segmented, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, Segmented, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 const W = 760;
@@ -65,6 +65,7 @@ export function LatLngSwapDemo({ index }: { index: number }) {
       ) : (
         <Insight tone="solution">{t("lab.swap.fix")}</Insight>
       )}
+      <Impact>{t("lab.swap.impact")}</Impact>
     </DemoCard>
   );
 }

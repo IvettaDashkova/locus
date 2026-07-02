@@ -7,7 +7,7 @@ import { project, unproject, type Viewport } from "@/lib/lab/projection";
 import { CITIES } from "@/lib/lab/fixtures";
 import type { LngLat } from "@/lib/lab/types";
 import { Button } from "@/components/ui/button";
-import { DemoCard, Insight, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 const W = 760;
@@ -151,6 +151,7 @@ export function ViewportUrlDemo({ index }: { index: number }) {
       </p>
 
       <Insight tone="solution">{t("lab.viewport.fix")}</Insight>
+      <Impact>{t("lab.viewport.impact")}</Impact>
     </DemoCard>
   );
 }

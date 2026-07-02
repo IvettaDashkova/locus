@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Check, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/provider";
 
 /** Shared colours for the SVG demos — chosen to read on both light and dark themes. */
 export const LAB_COLORS = {
@@ -108,6 +109,20 @@ export function Insight({ tone, children }: { tone: "problem" | "solution"; chil
         <Check className="mt-0.5 size-4 shrink-0" />
       )}
       <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** The business-impact takeaway — highlighted so a non-technical reader sees the value at a glance. */
+export function Impact({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex gap-2.5 rounded-lg bg-primary/5 px-3 py-2.5 ring-1 ring-primary/15">
+      <TrendingUp className="mt-0.5 size-4 shrink-0 text-primary" />
+      <div className="min-w-0 text-sm">
+        <span className="font-semibold text-primary">{t("lab.impactLabel")}: </span>
+        <span className="text-foreground/90">{children}</span>
+      </div>
     </div>
   );
 }

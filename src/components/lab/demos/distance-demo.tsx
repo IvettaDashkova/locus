@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { worldToXY } from "@/lib/lab/projection";
 import { naivePlanarM, planarErrorFraction, haversineM } from "@/lib/lab/distance";
 import type { LngLat } from "@/lib/lab/types";
-import { DemoCard, Insight, Metric, LAB_COLORS } from "../demo-card";
+import { DemoCard, Insight, Impact, Metric, LAB_COLORS } from "../demo-card";
 import { MiniMap, type MiniFeature } from "../mini-map";
 
 const W = 760;
@@ -65,6 +65,7 @@ export function DistanceDemo({ index }: { index: number }) {
       ) : (
         <Insight tone="solution">{t("lab.dist.fix")}</Insight>
       )}
+      <Impact>{t("lab.dist.impact")}</Impact>
     </DemoCard>
   );
 }
