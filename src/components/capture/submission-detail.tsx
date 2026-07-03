@@ -27,9 +27,13 @@ export function SubmissionDetail({
   if (!item) return null;
 
   const created = new Date(item.createdAt).toLocaleString(locale);
+  // GeoJSON stores [lng, lat]; display as "lat, lng" to match the Tracks waypoint list.
   const locationLabel = item.geometry
     ? item.geometry.type === "Point"
-      ? `Point ${(item.geometry.coordinates as number[]).map((n) => n.toFixed(4)).join(", ")}`
+      ? (() => {
+          const [lng, lat] = item.geometry.coordinates as number[];
+          return `Point ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        })()
       : item.geometry.type
     : t("detail.noLocation");
 

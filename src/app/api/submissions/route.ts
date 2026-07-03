@@ -7,9 +7,16 @@ import { siteLocationField, generatedSchema, type GeneratedSchema } from "@/lib/
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ajv = new Ajv2020({ strict: false, allErrors: true });
-ajv.addFormat("geo-point", true);
-ajv.addFormat("geo-polygon", true);
+// A fresh validator per request. Ajv.compile() caches every compiled schema by its serialized form,
+// and each submitted form yields a distinct schema (different field names/enums/title), so a shared
+// module-level instance would accumulate compiled schemas unboundedly over the process lifetime
+// (a slow memory leak on long-lived Fluid Compute instances). A per-request Ajv is GC-able and cheap.
+function makeValidator() {
+  const ajv = new Ajv2020({ strict: false, allErrors: true });
+  ajv.addFormat("geo-point", true);
+  ajv.addFormat("geo-polygon", true);
+  return ajv;
+}
 
 type Point = { type: "Point"; coordinates: [number, number] };
 
@@ -21,7 +28,10 @@ function findPolygon(data: Record<string, unknown> | null): unknown {
   return null;
 }
 
-/** GET → recent submissions for the list, map pins, and detail view. */
+/**
+ * GET → recent submissions for the list, map pins, and detail view. Public read (like `GET /api/tracks`):
+ * writes are auth-gated in POST, but the captured data is treated as shared, browsable demo content.
+ */
 export async function GET() {
   try {
     const sql = getClient();
@@ -105,7 +115,7 @@ export async function POST(req: Request) {
   // Server-side guard: never trust the client's data.
   let validate;
   try {
-    validate = ajv.compile(jsonSchema as object);
+    validate = makeValidator().compile(jsonSchema as object);
   } catch {
     return NextResponse.json({ error: "Unsupported form schema." }, { status: 400 });
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Route, Upload, X, Play, Pause, Footprints, Mountain, Bike, Car, Sailboat,
   Gauge, Clock, TrendingUp, Flag, Layers, Spline, Undo2, Check, Trash2, MousePointerClick,
@@ -28,6 +28,10 @@ import { TrackExplain } from "./track-explain";
 
 const FORM_WIDTH = 420; // left builder/detail panel
 const RAIL_WIDTH = 320; // right list rail (matches Capture's w-80)
+
+// A waypoint carries a stable `id` so the editable list keys by identity, not array index — reorder
+// and delete then reconcile correctly (index keys would break once rows gain state/animation).
+type Waypoint = { id: number; lng: number; lat: number };
 
 function ActivityIcon({ activity, className }: { activity: string | null; className?: string }) {
   switch (activity) {
@@ -78,10 +82,16 @@ export function TracksWorkspace() {
   const [building, setBuilding] = useState(false);
   const [routeName, setRouteName] = useState("");
   const [routeActivity, setRouteActivity] = useState<Activity>("walk");
-  const [routeWaypoints, setRouteWaypoints] = useState<[number, number][]>([]);
+  const [routeWaypoints, setRouteWaypoints] = useState<Waypoint[]>([]);
   const [routedPath, setRoutedPath] = useState<[number, number][] | null>(null);
   const [savingRoute, setSavingRoute] = useState(false);
   const previewSeq = useRef(0);
+  const wpIdRef = useRef(0);
+  // [lng, lat][] view of the waypoints for the map layer, the route preview, and the save payload.
+  const waypointCoords = useMemo<[number, number][]>(
+    () => routeWaypoints.map((w) => [w.lng, w.lat]),
+    [routeWaypoints],
+  );
 
   // Edit/delete state for the selected (owned) track.
   const [editing, setEditing] = useState(false);
@@ -191,33 +201,33 @@ export function TracksWorkspace() {
     const mine = ++previewSeq.current;
     // Only Boat needs the (debounced) sea-route lookup; every other activity is immediate (delay 0),
     // so switching *away* from Boat clears the sea path at once instead of lingering for the debounce.
-    const needsSeaRoute = routeActivity === "boat" && routeWaypoints.length >= 2;
+    const needsSeaRoute = routeActivity === "boat" && waypointCoords.length >= 2;
     const id = setTimeout(async () => {
-      if (routeWaypoints.length < 2) {
+      if (waypointCoords.length < 2) {
         setRoutedPath(null);
         return;
       }
       if (routeActivity !== "boat") {
-        setRoutedPath(routeWaypoints);
+        setRoutedPath(waypointCoords);
         return;
       }
       try {
         const res = await fetch("/api/tracks/route-preview", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ activity: routeActivity, waypoints: routeWaypoints }),
+          body: JSON.stringify({ activity: routeActivity, waypoints: waypointCoords }),
         });
         const json = await res.json();
-        if (mine === previewSeq.current) setRoutedPath(json.path ?? routeWaypoints);
+        if (mine === previewSeq.current) setRoutedPath(json.path ?? waypointCoords);
       } catch {
-        if (mine === previewSeq.current) setRoutedPath(routeWaypoints);
+        if (mine === previewSeq.current) setRoutedPath(waypointCoords);
       }
     }, needsSeaRoute ? 250 : 0);
     return () => clearTimeout(id);
-  }, [building, routeWaypoints, routeActivity]);
+  }, [building, waypointCoords, routeActivity]);
 
   const addWaypoint = useCallback((lng: number, lat: number, fly = false) => {
-    setRouteWaypoints((w) => [...w, [lng, lat]]);
+    setRouteWaypoints((w) => [...w, { id: wpIdRef.current++, lng, lat }]);
     if (fly && map) map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 12), duration: 700 });
   }, [map]);
 
@@ -258,7 +268,7 @@ export function TracksWorkspace() {
       const res = await fetch("/api/tracks/build", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: routeName, activity: routeActivity, waypoints: routeWaypoints }),
+        body: JSON.stringify({ name: routeName, activity: routeActivity, waypoints: waypointCoords }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Build failed");
@@ -369,7 +379,7 @@ export function TracksWorkspace() {
         showHeatmap={showHeatmap}
         playhead={selected ? playback.position : null}
       />
-      <RouteBuilderLayer active={building} waypoints={routeWaypoints} routedPath={routedPath} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
+      <RouteBuilderLayer active={building} waypoints={waypointCoords} routedPath={routedPath} onAdd={(lng, lat) => addWaypoint(lng, lat)} />
 
       <input
         ref={fileRef}
@@ -527,7 +537,7 @@ export function TracksWorkspace() {
                   <ol className="max-h-56 space-y-1 overflow-y-auto">
                     {routeWaypoints.map((wp, i) => (
                       <li
-                        key={i}
+                        key={wp.id}
                         className="flex items-center gap-1.5 rounded-md border bg-background/60 px-2 py-1.5"
                       >
                         <GripVertical className="size-3.5 shrink-0 text-muted-foreground/50" />
@@ -535,7 +545,7 @@ export function TracksWorkspace() {
                           {i + 1}
                         </span>
                         <span className="flex-1 truncate text-xs tabular-nums text-muted-foreground">
-                          {wp[1].toFixed(4)}, {wp[0].toFixed(4)}
+                          {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}
                         </span>
                         <Button
                           variant="ghost"

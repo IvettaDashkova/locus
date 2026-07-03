@@ -81,23 +81,33 @@ export async function insertTrack(sql: Sql, input: TrackInput): Promise<StoredTr
       ) WHERE id = ${trackId}
     `;
 
-    // Move/stop segments — geometry from GeoJSON we already shaped in computeTrackMetrics.
-    let seg = 0;
-    for (const s of segments) {
-      const geojson =
+    // Move/stop segments — geometry from GeoJSON we already shaped in computeTrackMetrics. Bulk-insert
+    // in one round-trip (same jsonb_array_elements pattern as track_points) instead of one INSERT per
+    // segment, so a long track with many move/stop transitions isn't N sequential DB calls.
+    const segRows = segments.map((s, i) => ({
+      seq: i,
+      kind: s.kind,
+      start_seq: s.startIdx,
+      end_seq: s.endIdx,
+      started_at: iso(s.startedAt),
+      ended_at: iso(s.endedAt),
+      distance_m: s.distanceM,
+      duration_s: s.durationS,
+      geojson:
         s.kind === "move"
           ? { type: "LineString", coordinates: s.coords }
-          : { type: "Point", coordinates: s.coords[0] };
+          : { type: "Point", coordinates: s.coords[0] },
+    }));
+    if (segRows.length) {
       await tx`
         INSERT INTO segments
           (track_id, kind, seq, start_seq, end_seq, started_at, ended_at, distance_m, duration_s, geom)
-        VALUES (
-          ${trackId}, ${s.kind}, ${seg}, ${s.startIdx}, ${s.endIdx},
-          ${iso(s.startedAt)}::timestamptz, ${iso(s.endedAt)}::timestamptz, ${s.distanceM}, ${s.durationS},
-          ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4326)
-        )
+        SELECT ${trackId}, r->>'kind', (r->>'seq')::int, (r->>'start_seq')::int, (r->>'end_seq')::int,
+               (r->>'started_at')::timestamptz, (r->>'ended_at')::timestamptz,
+               (r->>'distance_m')::float8, (r->>'duration_s')::float8,
+               ST_SetSRID(ST_GeomFromGeoJSON(r->>'geojson'), 4326)
+        FROM jsonb_array_elements(${sql.json(segRows)}) AS r
       `;
-      seg++;
     }
 
     return { id: trackId, metrics, segmentCount: segments.length };

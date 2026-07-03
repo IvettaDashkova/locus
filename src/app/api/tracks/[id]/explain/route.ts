@@ -4,6 +4,7 @@ import { getTrack } from "@/lib/tracks/queries";
 import { EXPLAIN_SYSTEM, tripFacts } from "@/lib/tracks/explain";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 import { requireAuth } from "@/lib/auth/guard";
+import { isUuid } from "@/lib/uuid";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (denied) return denied;
 
   const { id } = await params;
+  if (!isUuid(id)) return new Response("Invalid track id.", { status: 400 });
   const detail = await getTrack(id);
   if (!detail || !detail.track.metrics) {
     return new Response("Track not found or has no metrics.", { status: 404 });

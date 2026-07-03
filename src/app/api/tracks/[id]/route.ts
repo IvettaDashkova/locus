@@ -3,6 +3,10 @@ import { getClient } from "@/db/client";
 import { getTrack } from "@/lib/tracks/queries";
 import { requireUser, currentUserId } from "@/lib/auth/guard";
 import { isActivity } from "@/lib/tracks/presets";
+import { isUuid } from "@/lib/uuid";
+
+/** A malformed `[id]` (not a UUID) is a bad request, not a 404 — and never let it reach the uuid column. */
+const badId = () => NextResponse.json({ error: "Invalid track id." }, { status: 400 });
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +14,7 @@ export const dynamic = "force-dynamic";
 /** GET → one track with its ordered fixes (playback + charts) and move/stop segments. Public; flags `canEdit`. */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!isUuid(id)) return badId();
   try {
     const detail = await getTrack(id);
     if (!detail) return NextResponse.json({ error: "Track not found." }, { status: 404 });
@@ -27,6 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const who = await requireUser();
   if (who instanceof NextResponse) return who;
   const { id } = await params;
+  if (!isUuid(id)) return badId();
 
   let body: { name?: unknown; activity?: unknown; description?: unknown };
   try {
@@ -73,6 +79,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const who = await requireUser();
   if (who instanceof NextResponse) return who;
   const { id } = await params;
+  if (!isUuid(id)) return badId();
 
   try {
     const sql = getClient();
