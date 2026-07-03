@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { LabPage } from "@/components/lab/lab-page";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Navigation Lab",
-  description:
-    "Seven common map & navigation problems shown live, in plain language, each with the fix and its business impact — GPS smoothing, coordinate order, the antimeridian, distance accuracy, track simplification, marker clustering, and shareable map state.",
-};
+export const metadata: Metadata = buildMetadata("lab");
 
 export default function Lab() {
   return <LabPage />;
