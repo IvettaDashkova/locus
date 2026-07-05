@@ -131,6 +131,7 @@ export function ViewportUrlDemo({ index }: { index: number }) {
       </div>
 
       <MiniMap
+        label="Interactive map with shareable viewport state"
         ref={svgRef}
         project={(p) => project(p, vp)}
         features={PINS}

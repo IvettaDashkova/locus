@@ -77,7 +77,7 @@ export function GpsJitterDemo({ index }: { index: number }) {
         </label>
       </div>
 
-      <MiniMap project={project} features={features} graticuleStep={0} className="w-full rounded-lg border" />
+      <MiniMap project={project} features={features} graticuleStep={0} label="Map illustration of GPS jitter smoothing" className="w-full rounded-lg border" />
 
       <div className="grid grid-cols-3 gap-2">
         <Metric label={t("lab.jitter.trueLen")} value={`${(truthLen / 1000).toFixed(2)} km`} />

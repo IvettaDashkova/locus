@@ -51,6 +51,7 @@ export function AntimeridianDemo({ index }: { index: number }) {
       />
 
       <MiniMap
+        label="Map illustration of the antimeridian problem"
         project={(p) => worldToXY(p, W, H)}
         features={[...lines, ...pins]}
         width={W}

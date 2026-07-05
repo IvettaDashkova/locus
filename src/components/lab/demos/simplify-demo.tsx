@@ -40,7 +40,7 @@ export function SimplifyDemo({ index }: { index: number }) {
         />
       </label>
 
-      <MiniMap project={project} features={features} graticuleStep={0} className="w-full rounded-lg border" />
+      <MiniMap project={project} features={features} graticuleStep={0} label="Map illustration of track simplification" className="w-full rounded-lg border" />
 
       <div className="grid grid-cols-3 gap-2">
         <Metric label={t("lab.simplify.before")} value={`${trail.length}`} hint={t("lab.simplify.points")} />

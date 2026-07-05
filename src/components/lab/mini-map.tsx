@@ -24,6 +24,8 @@ type Props = {
   features: MiniFeature[];
   /** Graticule density in degrees; 0 hides it. World demos use 30, local demos a finer grid. */
   graticuleStep?: number;
+  /** Accessible name for the SVG (role="img" requires one — becomes a <title> + aria-label). */
+  label?: string;
   className?: string;
   cursor?: string;
   onPointerDown?: (e: PointerEvent<SVGSVGElement>) => void;
@@ -37,7 +39,7 @@ const path = (pts: [number, number][]) =>
   pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
 
 export const MiniMap = forwardRef<SVGSVGElement, Props>(function MiniMap(
-  { width = 760, height = 380, project, features, graticuleStep = 30, className, cursor, ...handlers },
+  { width = 760, height = 380, project, features, graticuleStep = 30, label = "Map illustration", className, cursor, ...handlers },
   ref,
 ) {
   // Build the graticule by sampling each meridian/parallel and projecting the samples, so it bends
@@ -63,8 +65,10 @@ export const MiniMap = forwardRef<SVGSVGElement, Props>(function MiniMap(
       className={className}
       style={{ cursor, touchAction: "none" }}
       role="img"
+      aria-label={label}
       {...handlers}
     >
+      <title>{label}</title>
       <rect x={0} y={0} width={width} height={height} className="fill-muted/40" rx={10} />
       <g className="text-foreground">
         {grat.map((g, i) => (

@@ -46,6 +46,7 @@ export function DistanceDemo({ index }: { index: number }) {
       </label>
 
       <MiniMap
+        label="Map illustration comparing distance measurements"
         project={(p) => worldToXY(p, W, H)}
         features={features}
         width={W}

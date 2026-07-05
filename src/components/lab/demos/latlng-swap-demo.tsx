@@ -46,6 +46,7 @@ export function LatLngSwapDemo({ index }: { index: number }) {
       />
 
       <MiniMap
+        label="Map illustration of swapped latitude and longitude"
         project={(p) => worldToXY(p, W, H)}
         features={features}
         width={W}

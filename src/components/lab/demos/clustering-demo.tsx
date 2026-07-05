@@ -53,7 +53,7 @@ export function ClusteringDemo({ index }: { index: number }) {
         ) : null}
       </div>
 
-      <MiniMap project={project} features={features} width={760} height={380} graticuleStep={10} className="w-full rounded-lg border" />
+      <MiniMap project={project} features={features} width={760} height={380} graticuleStep={10} label="Map illustration of marker clustering" className="w-full rounded-lg border" />
 
       <div className="grid grid-cols-2 gap-2">
         <Metric label={t("lab.cluster.points")} value={points.length.toLocaleString()} hint={t("lab.cluster.pointsHint")} />
