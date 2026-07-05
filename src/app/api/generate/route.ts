@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateForm } from "@/lib/capture/generate";
 import { reserveAiBudget, markExhausted, isQuotaError } from "@/lib/ai/usage";
-import { requireAuth } from "@/lib/auth/guard";
+import { allowAiCall } from "@/lib/ai/rate-limit";
+import { requireUser } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,8 +10,12 @@ export const dynamic = "force-dynamic";
 /** POST { prompt } → { jsonSchema, uiSchema }. The LLM emits a schema; we Zod-guard, retry once. */
 export async function POST(req: Request) {
   // AI generation spends the shared daily budget — sign-in required (anonymous visitors use the demo).
-  const denied = await requireAuth();
-  if (denied) return denied;
+  const who = await requireUser();
+  if (who instanceof NextResponse) return who;
+  // Per-user rate limit so one account can't burst through the shared daily budget.
+  if (!(await allowAiCall(who.id))) {
+    return NextResponse.json({ error: "Too many AI requests — please wait a minute and try again." }, { status: 429 });
+  }
 
   let body: { prompt?: unknown };
   try {

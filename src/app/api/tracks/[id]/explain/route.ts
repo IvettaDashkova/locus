@@ -2,8 +2,10 @@ import { streamText } from "ai";
 import { getModel } from "@/lib/ai/provider";
 import { getTrack } from "@/lib/tracks/queries";
 import { EXPLAIN_SYSTEM, tripFacts } from "@/lib/tracks/explain";
+import { NextResponse } from "next/server";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
-import { requireAuth } from "@/lib/auth/guard";
+import { allowAiCall } from "@/lib/ai/rate-limit";
+import { requireUser } from "@/lib/auth/guard";
 import { isUuid } from "@/lib/uuid";
 
 export const runtime = "nodejs";
@@ -16,8 +18,12 @@ export const maxDuration = 60;
  */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   // The briefing spends the shared daily AI budget — sign-in required, like the other AI endpoints.
-  const denied = await requireAuth();
-  if (denied) return denied;
+  const who = await requireUser();
+  if (who instanceof NextResponse) return who;
+  // Per-user rate limit so one account can't burst through the shared daily budget.
+  if (!(await allowAiCall(who.id))) {
+    return new Response("Too many AI requests — please wait a minute and try again.", { status: 429 });
+  }
 
   const { id } = await params;
   if (!isUuid(id)) return new Response("Invalid track id.", { status: 400 });

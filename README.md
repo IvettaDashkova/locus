@@ -16,6 +16,36 @@
 
 ---
 
+## For reviewers
+
+**⏱️ 60-second tour:** open the [live demo](https://locus-dun.vercel.app) → click **“Try the demo”** on
+Ask / Act / Capture (a faithful, pre-recorded result renders instantly — **no sign-in, no setup**) →
+open [`/lab`](https://locus-dun.vercel.app/lab) for seven map bugs explained with their business impact.
+
+This one codebase deliberately sits at the intersection of three in-demand tracks. Depending on the
+role you're screening for:
+
+- **AI / Applied-AI Engineer** — production RAG with a **grounding gate** (refuses out-of-corpus, cites
+  sources), **hybrid retrieval** (pgvector + tsvector fused with RRF), an **agent** with geo tools
+  exposed over an **MCP server** (same tools in-app *and* in Claude Desktop), structured output
+  (Zod-guarded), a **first-class eval harness** (70/70), and Langfuse/OpenTelemetry tracing.
+  → [`src/lib/ask`](./src/lib/ask), [`src/lib/act`](./src/lib/act), [`packages/locus-mcp`](./packages/locus-mcp), [`src/evals`](./src/evals)
+- **Full-Stack (Next.js/TS) Engineer** — Next.js 16 App Router (RSC, streaming, route handlers,
+  generated metadata + OG images), Auth.js (JWT + scrypt) with **server-side gates on every write**,
+  atomic budget/rate control, Drizzle, i18n (en/uk), OpenAPI/Swagger.
+  → [`src/app`](./src/app), [`src/auth.ts`](./src/auth.ts), [`src/lib/ai/usage.ts`](./src/lib/ai/usage.ts)
+- **Geospatial / GIS Engineer** — PostGIS geography, spatial + semantic + keyword search in **one
+  Postgres** (no vector/geo sync), MapLibre + Turf, trajectory analytics (stay-point stop detection,
+  Douglas–Peucker, antimeridian, haversine) with hand-calculated tests.
+  → [`src/lib/tracks`](./src/lib/tracks), [`src/lib/lab`](./src/lib/lab), [`src/components/map`](./src/components/map)
+
+**Quality signals:** ![CI](https://github.com/IvettaDashkova/locus/actions/workflows/ci.yml/badge.svg)
+· 77 unit tests + 70/70 evals · CI gate (typecheck → lint → test → build) · `npm audit` in CI ·
+grounding gate + no-hallucinated-tools evals · security headers + CSP · public-to-read /
+auth-to-write, enforced server-side.
+
+---
+
 ## What it is
 
 Most location work follows the same loop: **get data in, make sense of it, act on it, learn from
@@ -123,19 +153,25 @@ four toy repos.
 
 Two complementary layers:
 
-- **Unit tests** (`npm test`, Vitest) cover the pure logic — trajectory metrics, stay-point stop
-  detection, elevation hysteresis, GPX/GeoJSON parsing, the synthetic-track generator, activity
-  presets, marine routing, and the Navigation Lab geometry (GPS smoothing, Douglas–Peucker,
-  antimeridian split/unwrap, haversine vs planar distance, Web Mercator projection, grid clustering)
-  — with hand-calculated worked examples. Fast, deterministic, no DB.
-- **Eval harness** (`npm run eval`) exercises each module end-to-end (some steps hit the LLM):
+- **Unit tests** (`npm test`, Vitest) — **77 tests across 16 files** covering the pure logic:
+  trajectory metrics, stay-point stop detection, elevation hysteresis, GPX/GeoJSON parsing, the
+  synthetic-track generator, activity presets, marine routing, and the Navigation Lab geometry (GPS
+  smoothing, Douglas–Peucker, antimeridian split/unwrap, haversine vs planar distance, Web Mercator
+  projection, grid clustering) — with hand-calculated worked examples. Fast, deterministic, no DB.
+- **Eval harness** (`npm run eval`) exercises each module end-to-end (some steps hit the LLM). Latest
+  recorded run (results in [`src/evals/results/`](./src/evals/results)):
 
-| Module | Key metrics |
-| --- | --- |
-| Capture | schema_valid · field_coverage · conditional_ok · geo_format_ok |
-| Ask | recall@k · geo_match · refusal_correct |
-| Act | task_success · tool_choice · step_efficiency · no_hallucinated_tools |
-| Tracks | metric formulas vs. hand-calculated worked examples |
+| Module | Key metrics | Latest result |
+| --- | --- | --- |
+| Foundation | db_reachable · postgis_enabled · vector_enabled · embedding_dim | ✅ 6/6 |
+| Capture | schema_valid · field_coverage · conditional_ok · geo_format_ok | ✅ 15/15 |
+| Ask | recall@k · geo_match · refusal_correct | ✅ 14/14 |
+| Act | task_success · tool_choice · step_efficiency · no_hallucinated_tools | ✅ 5/5 |
+| Tracks | metric formulas vs. hand-calculated worked examples | ✅ 30/30 |
+| **Total** | | **✅ 70/70** |
+
+- **E2E** (`npm run test:e2e`, Playwright) — smoke coverage of routing, the OpenAPI contract, the
+  demo mode, and the signed-out write trust boundary (401), without spending LLM quota.
 
 **CI:** GitHub Actions runs `typecheck → lint → test → build` on every push and PR to `main`
 (`.github/workflows/ci.yml`).

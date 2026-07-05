@@ -17,13 +17,12 @@ test("OpenAPI document is served and well-formed", async ({ request }) => {
   );
 });
 
-test("root redirects into the first module and the app shell renders", async ({ page }) => {
+test("the public landing page renders for signed-out visitors", async ({ page }) => {
+  // Signed-out `/` is the portfolio landing (who I am + what Locus is + a way in), not a redirect.
   await page.goto("/");
-  await expect(page).toHaveURL(/\/capture$/);
-  // The shell shows navigation to all four modules.
-  for (const label of [/capture/i, /ask/i, /act/i, /tracks/i]) {
-    await expect(page.getByRole("link", { name: label }).first()).toBeVisible();
-  }
+  await expect(page.getByRole("heading", { name: /ivetta dashkova/i })).toBeVisible();
+  // A clear way into the app is present.
+  await expect(page.getByRole("link", { name: /capture|explore|open|locus/i }).first()).toBeVisible();
 });
 
 test("saving a submission while signed out is rejected by the API", async ({ request }) => {
@@ -32,4 +31,29 @@ test("saving a submission while signed out is rejected by the API", async ({ req
     data: { jsonSchema: { title: "x", type: "object", properties: {} }, data: {} },
   });
   expect(res.status()).toBe(401);
+});
+
+test("a malformed track id is a 400, not a 500", async ({ request }) => {
+  // Regression guard: a non-UUID path param must not reach the uuid column and throw.
+  expect((await request.get("/api/tracks/not-a-uuid")).status()).toBe(400);
+  // A well-formed but absent id is a clean 404.
+  expect((await request.get("/api/tracks/00000000-0000-4000-8000-000000000000")).status()).toBe(404);
+});
+
+test("robots.txt and sitemap.xml are served for crawlers", async ({ request }) => {
+  const robots = await request.get("/robots.txt");
+  expect(robots.ok()).toBeTruthy();
+  expect(await robots.text()).toContain("Sitemap");
+
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.ok()).toBeTruthy();
+  const xml = await sitemap.text();
+  for (const path of ["/ask", "/act", "/tracks", "/capture", "/lab"]) {
+    expect(xml).toContain(path);
+  }
+});
+
+test("the Navigation Lab renders (offline, no map/WebGL dependency)", async ({ page }) => {
+  await page.goto("/lab");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });

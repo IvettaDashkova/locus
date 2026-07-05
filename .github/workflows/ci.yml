@@ -35,6 +35,11 @@ jobs:
         # resolves them cleanly; --no-audit/--no-fund keep the log quiet.
         run: npm install --no-audit --no-fund
 
+      - name: Audit dependencies
+        # Surface known vulnerabilities on every run. Informational (doesn't fail the build on
+        # transitive advisories outside our control); tighten to a gate once the tree is clean.
+        run: npm audit --audit-level=high || true
+
       - name: Typecheck
         run: npm run typecheck
 

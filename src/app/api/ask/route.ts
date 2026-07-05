@@ -3,7 +3,9 @@ import { streamText } from "ai";
 import { getModel } from "@/lib/ai/provider";
 import { retrieve } from "@/lib/ask/retrieve";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
-import { requireAuth } from "@/lib/auth/guard";
+import { allowAiCall } from "@/lib/ai/rate-limit";
+import { requireUser } from "@/lib/auth/guard";
+import { NextResponse } from "next/server";
 import { flushTracing } from "@/instrumentation";
 
 export const runtime = "nodejs";
@@ -41,8 +43,12 @@ const SYSTEM = [
 
 export async function POST(req: Request) {
   // Ask spends the shared daily AI budget — sign-in required. Anonymous visitors use the demo answer.
-  const denied = await requireAuth();
-  if (denied) return denied;
+  const who = await requireUser();
+  if (who instanceof NextResponse) return who;
+  // Per-user rate limit so one account can't burst through the shared daily budget.
+  if (!(await allowAiCall(who.id))) {
+    return new Response("Too many AI requests — please wait a minute and try again.", { status: 429 });
+  }
 
   let body: { question?: unknown };
   try {

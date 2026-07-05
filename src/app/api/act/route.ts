@@ -1,7 +1,8 @@
-import { after } from "next/server";
+import { after, NextResponse } from "next/server";
 import { runAct } from "@/lib/act/agent";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
-import { requireAuth } from "@/lib/auth/guard";
+import { allowAiCall } from "@/lib/ai/rate-limit";
+import { requireUser } from "@/lib/auth/guard";
 import { flushTracing } from "@/instrumentation";
 
 export const runtime = "nodejs";
@@ -10,8 +11,12 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   // The Act agent spends the shared daily AI budget — sign-in required. Anonymous visitors use the demo.
-  const denied = await requireAuth();
-  if (denied) return denied;
+  const who = await requireUser();
+  if (who instanceof NextResponse) return who;
+  // Per-user rate limit so one account can't burst through the shared daily budget.
+  if (!(await allowAiCall(who.id))) {
+    return new Response("Too many AI requests — please wait a minute and try again.", { status: 429 });
+  }
 
   let body: { task?: unknown };
   try {
