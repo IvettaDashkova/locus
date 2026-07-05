@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/provider";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { JsonLd } from "@/components/seo/json-ld";
 
 const geistSans = Geist({
   variable: "--font-sans",
@@ -33,10 +34,19 @@ export const metadata: Metadata = {
     "RAG", "AI agent", "GPS tracks", "GIS", "portfolio", "Ivetta Dashkova",
   ],
   alternates: { canonical: "/" },
+  manifest: "/manifest.webmanifest",
+  category: "technology",
+  appleWebApp: { capable: true, title: "Locus", statusBarStyle: "black-translucent" },
+  // Set GOOGLE_SITE_VERIFICATION (Search Console → HTML tag method) to emit the verification meta.
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
   openGraph: {
     type: "website",
     url: SITE_URL,
     siteName: "Locus",
+    locale: "en_US",
+    alternateLocale: ["uk_UA", "pl_PL"],
     title: "Locus — geospatial workspace by Ivetta Dashkova",
     description: DESCRIPTION,
     images: [{ url: "/ivetta.jpg", width: 1017, height: 1280, alt: "Ivetta Dashkova" }],
@@ -47,6 +57,16 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: ["/ivetta.jpg"],
   },
+};
+
+/** Viewport + theme-color (split from `metadata` per the Next.js API). Dark-first, accent-tinted. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0f" },
+    { media: "(prefers-color-scheme: light)", color: "#6d4aff" },
+  ],
 };
 
 export default function RootLayout({
@@ -61,6 +81,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full">
+        <JsonLd />
         <ThemeProvider>
           <I18nProvider>{children}</I18nProvider>
         </ThemeProvider>

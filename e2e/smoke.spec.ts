@@ -57,3 +57,18 @@ test("the Navigation Lab renders (offline, no map/WebGL dependency)", async ({ p
   await page.goto("/lab");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
+
+test("SEO surfaces: structured data, manifest, and a real 404", async ({ request }) => {
+  // JSON-LD structured data on the landing page.
+  const home = await (await request.get("/")).text();
+  expect(home).toContain("application/ld+json");
+  expect(home).toContain('"@type":"WebApplication"');
+
+  // Installable web manifest.
+  const manifest = await request.get("/manifest.webmanifest");
+  expect(manifest.ok()).toBeTruthy();
+  expect((await manifest.json()).name).toContain("Locus");
+
+  // Unknown routes return a real 404 (not a soft 200).
+  expect((await request.get("/definitely-not-a-page")).status()).toBe(404);
+});

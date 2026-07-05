@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
+
+// The sign-in screen has no SEO value and shouldn't appear in search results.
+export const metadata: Metadata = {
+  title: "Sign in",
+  robots: { index: false, follow: false },
+};
 
 // Public sign-in / register screen — rendered outside the (modules) group so it has no map shell.
 export default async function LoginPage() {
