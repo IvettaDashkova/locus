@@ -57,6 +57,7 @@
     "react-dom": "19.2.4",
     "searoute-js": "^0.1.0",
     "shadcn": "^4.11.0",
+    "stripe": "^22.3.0",
     "suncalc": "^2.0.0",
     "tailwind-merge": "^3.6.0",
     "terra-draw": "^1.31.2",

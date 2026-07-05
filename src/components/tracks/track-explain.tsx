@@ -30,6 +30,10 @@ export function TrackExplain({ trackId }: { trackId: string }) {
         setText(t("auth.aiRequiresLogin"));
         return;
       }
+      if (res.status === 402) {
+        setText(t("credits.needCredits"));
+        return;
+      }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       if (reader) {

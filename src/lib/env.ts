@@ -28,6 +28,11 @@ const schema = z.object({
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_BASEURL: z.string().default("https://cloud.langfuse.com"),
+
+  // Payments (Stripe test mode). When unset, the credit paywall is OFF and the AI endpoints behave as
+  // before (shared free-tier budget only). Set both to turn the per-user credit paywall on.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;

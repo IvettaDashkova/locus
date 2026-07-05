@@ -68,6 +68,11 @@ export function FormStudio({ onSaved }: { onSaved?: (r: SaveResult) => void }) {
         setGenerated(null);
         return;
       }
+      if (res.status === 402) {
+        setError(t("credits.needCredits"));
+        setGenerated(null);
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? t("capture.generateFailed"));

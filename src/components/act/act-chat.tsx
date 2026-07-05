@@ -69,6 +69,10 @@ export function ActChat({
         patchLast((m) => ({ ...m, content: t("auth.aiRequiresLogin") }));
         return;
       }
+      if (res.status === 402) {
+        patchLast((m) => ({ ...m, content: t("credits.needCredits") }));
+        return;
+      }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let buf = "";

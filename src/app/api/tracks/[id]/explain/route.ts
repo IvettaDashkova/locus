@@ -5,6 +5,7 @@ import { EXPLAIN_SYSTEM, tripFacts } from "@/lib/tracks/explain";
 import { NextResponse } from "next/server";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 import { allowAiCall } from "@/lib/ai/rate-limit";
+import { creditsAvailable, spendCredit } from "@/lib/ai/credits";
 import { requireUser } from "@/lib/auth/guard";
 import { isUuid } from "@/lib/uuid";
 
@@ -32,9 +33,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return new Response("Track not found or has no metrics.", { status: 404 });
   }
 
+  // Paywall pre-check (no-op unless Stripe is configured).
+  if (!(await creditsAvailable(who.id))) {
+    return new Response("no_credits", { status: 402 });
+  }
+
   // Atomically reserve the round-trip up front so a spent quota 429s cleanly instead of erroring mid-stream.
   if (!(await reserveAiBudget(1))) {
     return new Response("The daily AI budget is spent — it resets at midnight (America/Los_Angeles).", { status: 429 });
+  }
+
+  // Budget reserved — deduct the user's credit (atomic).
+  if (!(await spendCredit(who.id))) {
+    return new Response("no_credits", { status: 402 });
   }
 
   const facts = tripFacts(detail.track, detail.track.metrics, detail.segments);

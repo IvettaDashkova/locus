@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateForm } from "@/lib/capture/generate";
 import { reserveAiBudget, markExhausted, isQuotaError } from "@/lib/ai/usage";
 import { allowAiCall } from "@/lib/ai/rate-limit";
+import { creditsAvailable, spendCredit } from "@/lib/ai/credits";
 import { requireUser } from "@/lib/auth/guard";
 
 export const runtime = "nodejs";
@@ -31,6 +32,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "That prompt is too long." }, { status: 413 });
   }
 
+  // Paywall pre-check (no-op unless Stripe is configured): don't spend the shared budget for a user
+  // who has no credits to cover the call.
+  if (!(await creditsAvailable(who.id))) {
+    return NextResponse.json({ error: "no_credits" }, { status: 402 });
+  }
+
   // Atomically reserve one round-trip from the daily Gemini free-tier budget before spending it.
   // Open to everyone, but the reservation is race-safe so concurrent callers can't overshoot quota.
   if (!(await reserveAiBudget(1))) {
@@ -38,6 +45,11 @@ export async function POST(req: Request) {
       { error: "The daily AI budget is spent — it resets at midnight (America/Los_Angeles)." },
       { status: 429 },
     );
+  }
+
+  // Budget is reserved — now deduct the user's credit (atomic; guards against a concurrent spend).
+  if (!(await spendCredit(who.id))) {
+    return NextResponse.json({ error: "no_credits" }, { status: 402 });
   }
 
   const res = await generateForm(prompt); // the round-trip is already reserved above

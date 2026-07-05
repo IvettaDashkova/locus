@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { MapPanel } from "@/components/map/map-panel";
 import { MapProvider } from "@/components/map/map-context";
 import { AuthProvider } from "@/components/auth/auth-context";
+import { CreditsProvider } from "@/components/credits/credits-context";
 import { auth } from "@/auth";
 
 /**
@@ -17,12 +18,14 @@ export default async function ModulesLayout({ children }: { children: React.Reac
   const user = session?.user ? { name: session.user.name, email: session.user.email } : null;
   return (
     <AuthProvider user={user}>
-      <MapProvider>
-        <AppShell userName={user?.name ?? user?.email ?? null}>
-          <MapPanel className="absolute inset-0 h-full w-full" />
-          <div className="pointer-events-none absolute inset-0">{children}</div>
-        </AppShell>
-      </MapProvider>
+      <CreditsProvider>
+        <MapProvider>
+          <AppShell userName={user?.name ?? user?.email ?? null}>
+            <MapPanel className="absolute inset-0 h-full w-full" />
+            <div className="pointer-events-none absolute inset-0">{children}</div>
+          </AppShell>
+        </MapProvider>
+      </CreditsProvider>
     </AuthProvider>
   );
 }

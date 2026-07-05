@@ -9,6 +9,7 @@ import { ModuleNav } from "./module-nav";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { UsageBadge } from "@/components/usage/usage-badge";
+import { CreditsBadge } from "@/components/credits/credits-badge";
 import { UserMenu } from "@/components/auth/user-menu";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { OnboardingTour, START_TOUR_EVENT } from "@/components/onboarding/onboarding-tour";
@@ -45,6 +46,7 @@ export function AppShell({ children, userName }: { children: React.ReactNode; us
         </Link>
         <span className="ml-2 hidden text-xs text-muted-foreground sm:inline">{t("app.subtitle")}</span>
         <div data-tour="topbar" className="ml-auto flex items-center gap-1 sm:gap-2">
+          <CreditsBadge />
           <UsageBadge />
           <Button
             variant="ghost"

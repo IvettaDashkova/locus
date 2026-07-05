@@ -4,6 +4,7 @@ import { getModel } from "@/lib/ai/provider";
 import { retrieve } from "@/lib/ask/retrieve";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 import { allowAiCall } from "@/lib/ai/rate-limit";
+import { creditsAvailable, spendCredit } from "@/lib/ai/credits";
 import { requireUser } from "@/lib/auth/guard";
 import { NextResponse } from "next/server";
 import { flushTracing } from "@/instrumentation";
@@ -60,6 +61,12 @@ export async function POST(req: Request) {
   if (!question) return new Response("A 'question' is required.", { status: 400 });
   if (question.length > 2000) return new Response("That question is too long.", { status: 413 });
 
+  // Paywall pre-check (no-op unless Stripe is configured): don't spend the shared budget for a user
+  // with no credits.
+  if (!(await creditsAvailable(who.id))) {
+    return new Response("no_credits", { status: 402 });
+  }
+
   // Atomically reserve the answer's round-trip up front so an exhausted quota returns a clean 429
   // instead of a raw model error mid-stream, and concurrent callers can't race past the cap. Open to
   // everyone — no sign-in required to try Ask. We reserve 1 here and reconcile extra steps onFinish.
@@ -70,9 +77,15 @@ export async function POST(req: Request) {
   const { chunks, topSimilarity } = await retrieve(question, { k: 6 });
 
   if (!chunks.length || topSimilarity < MIN_SIMILARITY) {
+    // Out-of-corpus refusal — no model call, so don't charge a credit.
     return new Response("I couldn't find anything about that in the available sources.", {
       headers: { "content-type": "text/plain; charset=utf-8", ...sourcesHeader([]) },
     });
+  }
+
+  // We're going to call the model — deduct the user's credit now (atomic).
+  if (!(await spendCredit(who.id))) {
+    return new Response("no_credits", { status: 402 });
   }
 
   const sources: Source[] = chunks.map((c, i) => ({

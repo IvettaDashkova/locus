@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { runAct } from "@/lib/act/agent";
 import { reserveAiBudget, recordAiUsage, markExhausted, isQuotaError } from "@/lib/ai/usage";
 import { allowAiCall } from "@/lib/ai/rate-limit";
+import { creditsAvailable, spendCredit } from "@/lib/ai/credits";
 import { requireUser } from "@/lib/auth/guard";
 import { flushTracing } from "@/instrumentation";
 
@@ -28,11 +29,22 @@ export async function POST(req: Request) {
   if (!task) return new Response("A 'task' is required.", { status: 400 });
   if (task.length > 2000) return new Response("That task is too long.", { status: 413 });
 
+  // Paywall pre-check (no-op unless Stripe is configured): don't spend the shared budget for a user
+  // with no credits. One credit covers the whole agent run regardless of step count.
+  if (!(await creditsAvailable(who.id))) {
+    return new Response("no_credits", { status: 402 });
+  }
+
   // The Act agent fans out up to `stepCountIs(8)` model calls per request. Atomically reserve the
   // entry round-trip before starting — race-safe, so concurrent runs can't slip past a spent budget —
   // and reconcile the agent's actual step count once the stream drains. Open to everyone, no sign-in.
   if (!(await reserveAiBudget(1))) {
     return new Response("The daily AI budget is spent — it resets at midnight (America/Los_Angeles).", { status: 429 });
+  }
+
+  // Budget reserved — deduct the user's credit (atomic; one credit per agent run).
+  if (!(await spendCredit(who.id))) {
+    return new Response("no_credits", { status: 402 });
   }
 
   const { result, features } = runAct(task);

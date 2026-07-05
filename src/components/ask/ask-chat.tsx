@@ -78,6 +78,15 @@ export function AskChat({ onSources, onClose }: { onSources: (s: AskSource[]) =>
         });
         return;
       }
+      if (res.status === 402) {
+        // Out of AI credits — nudge the user to the "Buy" button in the header.
+        setMessages((m) => {
+          const next = [...m];
+          next[next.length - 1] = { role: "assistant", content: t("credits.needCredits") };
+          return next;
+        });
+        return;
+      }
       let sources: AskSource[] = [];
       const header = res.headers.get("x-locus-sources");
       if (header) {
