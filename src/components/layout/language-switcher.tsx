@@ -16,7 +16,11 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" size="sm" className="gap-1.5" aria-label={t("lang.label")} />}
+        render={
+          // Include the visible locale code in the accessible name so it matches the button's visible
+          // text (WCAG "label in name" — fixes Lighthouse label-content-name-mismatch).
+          <Button variant="ghost" size="sm" className="gap-1.5" aria-label={`${t("lang.label")} (${locale.toUpperCase()})`} />
+        }
       >
         <Languages className="size-4" />
         <span className="text-xs font-medium uppercase">{locale}</span>

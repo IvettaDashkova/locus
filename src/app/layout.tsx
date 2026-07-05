@@ -37,10 +37,10 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   category: "technology",
   appleWebApp: { capable: true, title: "Locus", statusBarStyle: "black-translucent" },
-  // Set GOOGLE_SITE_VERIFICATION (Search Console → HTML tag method) to emit the verification meta.
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  // Google Search Console ownership (HTML-tag method). Public token; env can override per-deploy.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION ?? "FtB09ylEgeZTBM2OX5YhmS0WRtqoU6w67aaJuGluKmo",
+  },
   openGraph: {
     type: "website",
     url: SITE_URL,
