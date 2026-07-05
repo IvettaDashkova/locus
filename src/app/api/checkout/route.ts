@@ -46,9 +46,10 @@ export async function POST(req: Request) {
           },
         },
       ],
-      // The webhook reads these to credit the right account with the right amount.
+      // The webhook (and the return-confirm fallback) read these to credit the right account.
       metadata: { userId: who.id, credits: String(CREDIT_PACK.credits) },
-      success_url: `${origin}${back}?checkout=success`,
+      // `{CHECKOUT_SESSION_ID}` lets the success page confirm + credit even without a webhook.
+      success_url: `${origin}${back}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${back}?checkout=cancel`,
     });
     return NextResponse.json({ url: session.url });

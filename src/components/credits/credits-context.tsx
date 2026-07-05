@@ -65,16 +65,36 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  // Coming back from Stripe Checkout: refresh the (webhook-credited) balance and strip the query.
+  // Coming back from Stripe Checkout: confirm the session server-side (credits the account even with
+  // no webhook configured — idempotent, so it's harmless if the webhook also fires), then strip the
+  // query so a refresh doesn't re-trigger it.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") === "success") {
-      setTimeout(refresh, 1200); // give the webhook a moment to land
-      params.delete("checkout");
-      const qs = params.toString();
-      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
-    }
+    if (params.get("checkout") !== "success") return;
+    const sessionId = params.get("session_id");
+    (async () => {
+      if (sessionId) {
+        try {
+          const res = await fetch("/api/checkout/confirm", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (typeof data.balance === "number") setBalance(data.balance);
+          }
+        } catch {
+          /* fall back to a plain refresh below */
+        }
+      }
+      refresh();
+    })();
+    params.delete("checkout");
+    params.delete("session_id");
+    const qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
   }, [refresh]);
 
   const startCheckout = useCallback(async (returnTo?: string) => {
