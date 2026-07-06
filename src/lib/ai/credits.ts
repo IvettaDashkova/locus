@@ -10,6 +10,10 @@ import { stripeConfigured } from "@/lib/stripe";
  * The paywall is only enforced when Stripe is configured (`stripeConfigured()`); otherwise the gate
  * helpers are no-ops, so the app runs exactly as before until the keys are set.
  */
+/** Free credits granted once, on registration, so a new visitor (e.g. a reviewer) can try the AI
+ *  modules without paying. Buying a pack tops up beyond these. */
+export const WELCOME_CREDITS = 5;
+
 let ensured = false;
 async function ensureTables(): Promise<void> {
   if (ensured) return;

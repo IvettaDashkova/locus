@@ -7,6 +7,7 @@ import { signIn, signOut } from "@/auth";
 import { getDb } from "@/db/client";
 import { users } from "@/db/schema";
 import { hashPassword } from "@/lib/auth/password";
+import { grantCredits, WELCOME_CREDITS } from "@/lib/ai/credits";
 
 export type AuthState = { error?: string } | null;
 
@@ -47,7 +48,13 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   if (existing) return { error: "taken" };
 
-  await db.insert(users).values({ email, name: name ?? null, passwordHash: await hashPassword(password) });
+  const [created] = await db
+    .insert(users)
+    .values({ email, name: name ?? null, passwordHash: await hashPassword(password) })
+    .returning({ id: users.id });
+
+  // Welcome credits so a new user can try the AI modules right away (idempotent by a per-user ref).
+  await grantCredits(created.id, WELCOME_CREDITS, `welcome:${created.id}`).catch(() => {});
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/capture" });
