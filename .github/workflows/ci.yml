@@ -55,3 +55,35 @@ jobs:
         env:
           DATABASE_URL: postgres://ci:ci@localhost:5432/ci
         run: npm run build
+
+  a11y:
+    name: accessibility (axe · WCAG 2.1 AA)
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # No real DB in CI — the module shells still render (client-fetch just returns empty), which is
+      # what axe scans. The map pages get software WebGL (SwiftShader) via the a11y script's flags.
+      DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Accessibility audit
+        # Start the prod server, wait for it, then run the axe sweep (exits non-zero on any violation).
+        run: |
+          npm run start &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/api/openapi >/dev/null && break; sleep 2; done
+          npm run a11y
