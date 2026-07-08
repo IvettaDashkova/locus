@@ -48,9 +48,11 @@ export async function POST(req: Request) {
       ],
       // The webhook (and the return-confirm fallback) read these to credit the right account.
       metadata: { userId: who.id, credits: String(CREDIT_PACK.credits) },
-      // `{CHECKOUT_SESSION_ID}` lets the success page confirm + credit even without a webhook.
-      success_url: `${origin}${back}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}${back}?checkout=cancel`,
+      // Build via URL so a `back` that already has a query string doesn't produce a malformed `?…?…`.
+      // Stripe's literal `{CHECKOUT_SESSION_ID}` is appended raw (it must not be percent-encoded) and
+      // lets the success page confirm + credit even without a webhook.
+      success_url: `${new URL(back, origin).toString()}${back.includes("?") ? "&" : "?"}checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${new URL(back, origin).toString()}${back.includes("?") ? "&" : "?"}checkout=cancel`,
     });
     return NextResponse.json({ url: session.url });
   } catch (e) {
